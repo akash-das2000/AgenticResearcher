@@ -81,13 +81,13 @@ document.addEventListener('DOMContentLoaded', function() {
             uploadStatus.innerHTML = `<span class="error">⚠️ No file selected.</span>`;
             return;
         }
-        uploadStatus.innerHTML = "⏳ Uploading...";
+        uploadStatus.innerHTML = "⏳ Uploading PDF...";
         uploadBtn.disabled = true;
 
         const formData = new FormData();
         formData.append('file', selectedFile);
-//updated link here
-        fetch('https://agenticresearcher.onrender.com/api/upload/', {
+
+        fetch('/api/upload/', {
             method: 'POST',
             headers: {'X-CSRFToken': '{{ csrf_token }}'},
             body: formData
@@ -96,14 +96,13 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.id && data.url) {
                 uploadedPdfId = data.id;
-                //uploadStatus.innerHTML = `<span class="success">✅ Upload successful!</span> PDF ID: ${data.id}`;
-                uploadStatus.innerHTML = `<span class="success">✅ Upload successful!</span>`;
+                uploadStatus.innerHTML = `<span class="success">✅ Upload successful! Parsing PDF...</span>`;
                 renderPDF(data.url);
-                showPostUploadActions();
+                // 📦 Auto-parse the uploaded PDF
+                parseUploadedPDF(uploadedPdfId);
             } else {
-                uploadStatus.innerHTML = `<span class="error">❌ Error: ${JSON.stringify(data)}</span>`;
+                uploadStatus.innerHTML = `<span class="error">❌ Upload error: ${JSON.stringify(data)}</span>`;
             }
-            uploadBtn.disabled = false;
         })
         .catch(error => {
             console.error("Upload error:", error);
@@ -111,6 +110,27 @@ document.addEventListener('DOMContentLoaded', function() {
             uploadBtn.disabled = false;
         });
     });
+
+    // Parse PDF content
+    function parseUploadedPDF(pdfId) {
+        fetch(`/api/extract/${pdfId}/`, {
+            method: 'POST',
+            headers: {'X-CSRFToken': '{{ csrf_token }}'}
+        })
+        .then(resp => resp.json())
+        .then(data => {
+            uploadStatus.innerHTML = `<span class="success">✅ PDF parsed successfully!</span>`;
+            showPostUploadActions();
+        })
+        .catch(err => {
+            console.error("Parse error:", err);
+            uploadStatus.innerHTML += `<br><span class="error">⚠️ Parsing failed. You can retry later.</span>`;
+            showPostUploadActions();
+        })
+        .finally(() => {
+            uploadBtn.disabled = false;
+        });
+    }
 
     // Render PDF
     function renderPDF(pdfUrl) {
