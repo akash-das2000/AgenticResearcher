@@ -90,11 +90,3 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # 🌟 LLM API Keys
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-
-if os.getenv('CREATE_SUPERUSER', 'False') == 'True':
-    from django.contrib.auth import get_user_model
-    User = get_user_model()
-    if not User.objects.filter(username='admin').exists():
-        User.objects.create_superuser('admin', 'admin@example.com', 'adminpassword')
-        print("✅ Superuser created: username=admin, password=adminpassword")
-
