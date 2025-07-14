@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadBtn.disabled = true;
 
         const formData = new FormData();
-        formData.append('pdf_file', selectedFile);
+        formData.append('file', selectedFile);
 
         fetch('https://agenticresearcher.onrender.com/api/upload/', {
             method: 'POST',
