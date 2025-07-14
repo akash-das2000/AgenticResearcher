@@ -3,6 +3,7 @@
 import os
 import openai
 from google import genai
+from django.conf import settings
 
 # 🚨 Load API Keys
 OPENAI_API_KEY = getattr(settings, "OPENAI_API_KEY", None)
