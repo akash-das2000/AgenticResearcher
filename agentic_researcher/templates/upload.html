@@ -8,9 +8,10 @@
     <div class="upload-container">
         <div class="dropzone" id="dropzone">
             <p>📂 Drag & drop your PDF here <br> or</p>
-            <form id="uploadForm">
+            <form id="uploadForm" onsubmit="return false;">
                 {% csrf_token %}
-                <input type="file" id="pdfFile" name="pdf_file" accept="application/pdf" hidden>
+                <!-- Visible file input instead of hidden for better compatibility -->
+                <input type="file" id="pdfFile" name="pdf_file" accept="application/pdf" style="display:none;">
                 <button type="button" id="selectFileBtn">Choose a PDF</button>
                 <button type="submit" id="uploadBtn" disabled>Upload PDF</button>
             </form>
@@ -32,8 +33,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const pdfViewer = document.getElementById('pdfViewer');
     let selectedFile = null;
 
-    selectFileBtn.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', () => {
+    // ✅ Open file picker when "Choose a PDF" clicked
+    selectFileBtn.addEventListener('click', function() {
+        console.log("Choose PDF button clicked"); // Debug log
+        fileInput.click();
+    });
+
+    // ✅ Handle file selection from file picker
+    fileInput.addEventListener('change', function() {
         if (fileInput.files.length > 0) {
             selectedFile = fileInput.files[0];
             uploadBtn.disabled = false;
@@ -41,29 +48,40 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    dropzone.addEventListener('dragover', (e) => {
+    // ✅ Handle drag & drop
+    dropzone.addEventListener('dragover', function(e) {
         e.preventDefault();
         dropzone.classList.add('dragover');
     });
 
-    dropzone.addEventListener('dragleave', () => {
+    dropzone.addEventListener('dragleave', function() {
         dropzone.classList.remove('dragover');
     });
 
-    dropzone.addEventListener('drop', (e) => {
+    dropzone.addEventListener('drop', function(e) {
         e.preventDefault();
         dropzone.classList.remove('dragover');
-        selectedFile = e.dataTransfer.files[0];
-        fileInput.files = e.dataTransfer.files;
-        uploadBtn.disabled = false;
-        uploadStatus.innerHTML = `Selected: <strong>${selectedFile.name}</strong>`;
+        if (e.dataTransfer.files.length > 0) {
+            selectedFile = e.dataTransfer.files[0];
+            // Manually set fileInput so formData picks it up
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(selectedFile);
+            fileInput.files = dataTransfer.files;
+
+            uploadBtn.disabled = false;
+            uploadStatus.innerHTML = `Selected: <strong>${selectedFile.name}</strong>`;
+        }
     });
 
+    // ✅ Handle form submit (upload)
     uploadForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        if (!selectedFile) return;
+        if (!selectedFile) {
+            uploadStatus.innerHTML = `<span class="error">⚠️ No file selected.</span>`;
+            return;
+        }
 
-        uploadStatus.innerHTML = "Uploading...";
+        uploadStatus.innerHTML = "⏳ Uploading...";
         uploadBtn.disabled = true;
 
         const formData = new FormData();
@@ -80,19 +98,22 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.id && data.url) {
                 uploadStatus.innerHTML = `<span class="success">✅ Upload successful!</span> PDF ID: ${data.id}`;
-                renderPDF(data.url); // ✅ Load PDF into viewer
+                renderPDF(data.url);
             } else {
                 uploadStatus.innerHTML = `<span class="error">❌ Error: ${JSON.stringify(data)}</span>`;
             }
             uploadBtn.disabled = false;
         })
         .catch(error => {
+            console.error("Upload error:", error);
             uploadStatus.innerHTML = `<span class="error">❌ Upload failed: ${error}</span>`;
             uploadBtn.disabled = false;
         });
     });
 
+    // ✅ Render PDF using PDF.js
     function renderPDF(pdfUrl) {
+        console.log("Rendering PDF:", pdfUrl);
         const loadingTask = pdfjsLib.getDocument(pdfUrl);
         loadingTask.promise.then(pdf => {
             pdfViewer.innerHTML = ''; // Clear placeholder
@@ -112,8 +133,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     page.render(renderContext);
                 });
             }
-        }, error => {
-            pdfViewer.innerHTML = `<span class="error">❌ Failed to load PDF: ${error}</span>`;
+        }).catch(error => {
+            console.error("PDF render error:", error);
+            pdfViewer.innerHTML = `<span class="error">❌ Failed to load PDF: ${error.message}</span>`;
         });
     }
 });
