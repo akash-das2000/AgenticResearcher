@@ -15,12 +15,13 @@ from .serializers import (
 )
 from .services import pdf_extractor, outline, writer, formatter
 from io import BytesIO
+import tempfile
 
 
 
 class UploadPDFView(APIView):
     """
-    API to upload a PDF and parse directly from memory.
+    API to upload a PDF and parse using a temp file.
     """
     parser_classes = [MultiPartParser, FormParser]
 
@@ -32,19 +33,27 @@ class UploadPDFView(APIView):
         if not uploaded_file:
             return Response({"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # ✅ Parse PDF directly from uploaded file (before saving)
+        # ✅ Write uploaded file to a temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+            for chunk in uploaded_file.chunks():
+                tmp_file.write(chunk)
+            tmp_file_path = tmp_file.name
+
+        # ✅ Parse PDF using the temp file path
+        parse_status = "success"
         try:
-            result = pdf_extractor.extract_pdf(uploaded_file)
+            result = pdf_extractor.extract_pdf(tmp_file_path)
         except Exception as e:
             print(f"ERROR parsing PDF: {e}")
-            return Response({"error": f"PDF parsing failed: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            parse_status = "failed"
+            result = {"text": "", "images": [], "tables": []}
 
         # ✅ Save UploadedPDF metadata
         serializer = UploadedPDFSerializer(data=request.data)
         if serializer.is_valid():
             pdf = serializer.save()
 
-            # ✅ Save extracted content to DB
+            # ✅ Save extracted content (even if parsing failed)
             ExtractedContent.objects.create(
                 pdf=pdf,
                 text=result['text'],
@@ -54,7 +63,8 @@ class UploadPDFView(APIView):
 
             return Response({
                 "id": pdf.id,
-                "url": pdf.file.url
+                "url": pdf.file.url,
+                "parse_status": parse_status
             }, status=status.HTTP_201_CREATED)
         else:
             print("DEBUG: serializer errors =", serializer.errors)
