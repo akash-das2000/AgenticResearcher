@@ -2,12 +2,15 @@
 
 {% block content %}
 <div class="upload-container">
-    <h2>Upload a PDF</h2>
-    <form id="uploadForm">
-        {% csrf_token %}
-        <input type="file" id="pdfFile" name="pdf_file" accept="application/pdf" required>
-        <button type="submit" id="uploadBtn">Upload PDF</button>
-    </form>
+    <div class="dropzone" id="dropzone">
+        <p>📂 Drag & drop your PDF here <br> or</p>
+        <form id="uploadForm">
+            {% csrf_token %}
+            <input type="file" id="pdfFile" name="pdf_file" accept="application/pdf" hidden>
+            <button type="button" id="selectFileBtn">Choose a PDF</button>
+            <button type="submit" id="uploadBtn" disabled>Upload PDF</button>
+        </form>
+    </div>
     <div id="uploadStatus"></div>
 </div>
 {% endblock %}
@@ -15,18 +18,50 @@
 {% block extra_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const uploadForm = document.getElementById('uploadForm');
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('pdfFile');
+    const selectFileBtn = document.getElementById('selectFileBtn');
     const uploadBtn = document.getElementById('uploadBtn');
+    const uploadForm = document.getElementById('uploadForm');
     const uploadStatus = document.getElementById('uploadStatus');
+    let selectedFile = null;
+
+    selectFileBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) {
+            selectedFile = fileInput.files[0];
+            uploadBtn.disabled = false;
+            uploadStatus.innerHTML = `Selected: <strong>${selectedFile.name}</strong>`;
+        }
+    });
+
+    dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+    });
+
+    dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('dragover');
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        selectedFile = e.dataTransfer.files[0];
+        fileInput.files = e.dataTransfer.files;
+        uploadBtn.disabled = false;
+        uploadStatus.innerHTML = `Selected: <strong>${selectedFile.name}</strong>`;
+    });
 
     uploadForm.addEventListener('submit', function(e) {
         e.preventDefault();
+        if (!selectedFile) return;
+
         uploadStatus.innerHTML = "Uploading...";
         uploadBtn.disabled = true;
 
-        const fileInput = document.getElementById('pdfFile');
         const formData = new FormData();
-        formData.append('pdf_file', fileInput.files[0]);
+        formData.append('pdf_file', selectedFile);
 
         fetch('/api/upload/', {
             method: 'POST',
