@@ -18,6 +18,7 @@ ALLOWED_HOSTS = ['*']  # Change to your Render domain in production
 
 # Application definition
 INSTALLED_APPS = [
+    'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -29,6 +30,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',  # ✅ Enable Whitenoise
     'django.contrib.sessions.middleware.SessionMiddleware',
