@@ -7,7 +7,12 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('researcher_app.urls')),  # All API endpoints
+
+    # API endpoints (still under /api/)
+    path('api/', include('researcher_app.urls')),
+
+    # Frontend routes (no prefix)
+    path('', include('researcher_app.frontend_urls')),  # <- Add this
 ]
 
 # Serve media files during development
