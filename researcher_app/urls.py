@@ -17,6 +17,4 @@ urlpatterns = [
     path('api/chat/<int:pk>/', ChatWithPDFView.as_view(), name='chat-with-pdf'),
     path('api/rules/', NormalizationRuleView.as_view(), name='normalization-rules'),
 
-    # Frontend routes
-    path('upload/', upload_page, name='upload'),
 ]
