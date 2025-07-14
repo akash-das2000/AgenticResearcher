@@ -1,6 +1,6 @@
 # researcher_app/views.py
 
-#Backend
+# Backend
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -19,7 +19,26 @@ import tempfile
 import threading
 
 
+def parse_pdf_async(pdf_id, uploaded_file):
+    """
+    Background task to parse PDF after upload.
+    """
+    print(f"DEBUG: Background parsing for PDF {pdf_id}")
+    try:
+        uploaded_file.seek(0)  # Reset pointer in case it's been read
+        result = pdf_extractor.extract_pdf(uploaded_file)  # Pass in-memory file
+        pdf = UploadedPDF.objects.get(id=pdf_id)
 
+        ExtractedContent.objects.create(
+            pdf=pdf,
+            text=result['text'],
+            images=result['images'],
+            tables=result['tables']
+        )
+        print(f"✅ Background parsing completed for PDF {pdf_id}")
+
+    except Exception as e:
+        print(f"❌ Background parsing failed for PDF {pdf_id}: {e}")
 
 
 class UploadPDFView(APIView):
@@ -51,27 +70,6 @@ class UploadPDFView(APIView):
         else:
             print("DEBUG: serializer errors =", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def parse_pdf_async(pdf_id, uploaded_file):
-        print(f"DEBUG: Background parsing for PDF {pdf_id}")
-        try:
-            uploaded_file.seek(0)  # Reset pointer
-            result = pdf_extractor.extract_pdf(uploaded_file)  # Pass in-memory file
-            pdf = UploadedPDF.objects.get(id=pdf_id)
-    
-            ExtractedContent.objects.create(
-                pdf=pdf,
-                text=result['text'],
-                images=result['images'],
-                tables=result['tables']
-            )
-            print(f"✅ Background parsing completed for PDF {pdf_id}")
-    
-        except Exception as e:
-            print(f"❌ Background parsing failed for PDF {pdf_id}: {e}")
-
-
-
 
 
 class ExtractPDFView(APIView):
@@ -206,8 +204,7 @@ class NormalizationRuleView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
-#Frontend
+# Frontend
 from django.shortcuts import render
 
 def upload_page(request):
