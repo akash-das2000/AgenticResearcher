@@ -14,6 +14,7 @@ from .serializers import (
     ChatMessageSerializer, NormalizationRuleSerializer
 )
 from .services import pdf_extractor, outline, writer, formatter
+from io import BytesIO
 
 
 class UploadPDFView(APIView):
@@ -26,34 +27,41 @@ class UploadPDFView(APIView):
         print("DEBUG: request.data =", request.data)
         print("DEBUG: request.FILES =", request.FILES)
 
+        # Create serializer but don’t save yet
         serializer = UploadedPDFSerializer(data=request.data)
+
         if serializer.is_valid():
-            pdf = serializer.save()
+            parse_status = "success"
             try:
-                # ✅ Parse PDF directly from uploaded file (request.FILES)
-                uploaded_file = request.FILES.get('file')
-                result = pdf_extractor.extract_pdf(uploaded_file)
-                
-                # ✅ Save extracted content to DB
-                content_obj, created = ExtractedContent.objects.update_or_create(
+                # Get file directly from memory
+                uploaded_file = request.FILES['file']
+                pdf_stream = BytesIO(uploaded_file.read())
+
+                # Parse PDF content directly from BytesIO
+                result = pdf_extractor.extract_pdf(pdf_stream)
+
+                # Save parsed content
+                pdf = serializer.save()  # Save UploadedPDF model
+                ExtractedContent.objects.update_or_create(
                     pdf=pdf,
                     defaults={
-                        "text": result.get('text', ''),
-                        "images": result.get('images', []),
-                        "tables": result.get('tables', [])
+                        "text": result['text'],
+                        "images": result['images'],
+                        "tables": result['tables']
                     }
                 )
-                parse_status = "success"
+
             except Exception as e:
-                print("ERROR parsing PDF:", e)
+                print("ERROR parsing PDF:", str(e))
                 parse_status = "failed"
+                pdf = serializer.save()  # Save UploadedPDF anyway for later retries
 
             return Response({
                 "id": pdf.id,
                 "url": pdf.file.url,
                 "parse_status": parse_status
             }, status=status.HTTP_201_CREATED)
-        
+
         print("DEBUG: serializer errors =", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
