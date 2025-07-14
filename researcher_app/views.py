@@ -19,9 +19,10 @@ import tempfile
 
 
 
+
 class UploadPDFView(APIView):
     """
-    API to upload a PDF and parse using a temp file.
+    API to upload a PDF and parse using a temp file (Render safe).
     """
     parser_classes = [MultiPartParser, FormParser]
 
@@ -33,16 +34,16 @@ class UploadPDFView(APIView):
         if not uploaded_file:
             return Response({"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # ✅ Write uploaded file to a temporary file
+        # ✅ Save to temporary file
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
             for chunk in uploaded_file.chunks():
                 tmp_file.write(chunk)
             tmp_file_path = tmp_file.name
 
-        # ✅ Parse PDF using the temp file path
+        # ✅ Parse PDF
         parse_status = "success"
         try:
-            result = pdf_extractor.extract_pdf(tmp_file_path)
+            result = pdf_extractor.extract_pdf(tmp_file_path)  # Pass temp file path
         except Exception as e:
             print(f"ERROR parsing PDF: {e}")
             parse_status = "failed"
@@ -53,7 +54,7 @@ class UploadPDFView(APIView):
         if serializer.is_valid():
             pdf = serializer.save()
 
-            # ✅ Save extracted content (even if parsing failed)
+            # ✅ Save extracted content
             ExtractedContent.objects.create(
                 pdf=pdf,
                 text=result['text'],
