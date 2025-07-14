@@ -30,39 +30,41 @@ def extract_pdf(pdf_source):
     Returns:
         dict: {"text": str, "images": [paths], "tables": [paths]}
     """
-    # Rewind stream if needed
-    if hasattr(pdf_source, 'seek'):
-        pdf_source.seek(0)
-
-    if isinstance(pdf_source, (str, bytes, os.PathLike)):
-        # Path
-        doc = fitz.open(pdf_source)
-        pdfplumber_obj = pdfplumber.open(pdf_source)
-        images_source = pdf_source
-    else:
-        # File-like object
+    # ✅ Convert file-like object to fresh BytesIO
+    if hasattr(pdf_source, 'read'):
         pdf_bytes = pdf_source.read()
-        pdf_source.seek(0)  # Reset after read
-        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-        pdfplumber_obj = pdfplumber.open(io.BytesIO(pdf_bytes))
-        images_source = io.BytesIO(pdf_bytes)
+        pdf_source = io.BytesIO(pdf_bytes)
 
-    # OCR Text
-    pages = convert_from_path(images_source) if isinstance(images_source, str) else convert_from_path(images_source, fmt='pdf')
+    # ✅ Open for PyMuPDF and pdfplumber
+    try:
+        doc = fitz.open(stream=pdf_source, filetype="pdf")
+        pdfplumber_obj = pdfplumber.open(pdf_source)
+    except Exception as e:
+        print(f"ERROR opening PDF: {e}")
+        raise
+
+    # ✅ OCR Text
+    try:
+        pages = convert_from_path(pdf_source)
+    except Exception as e:
+        print(f"WARNING: convert_from_path fallback to BytesIO failed: {e}")
+        pdf_source.seek(0)
+        pages = convert_from_path(pdf_source)
+
     pages_text = []
     for page in pages:
         text = pytesseract.image_to_string(page)
         pages_text.append(text)
     full_text = "\n\n".join(pages_text)
 
-    # Clean text
+    # ✅ Clean text
     cleaned_text = normalize_whitespace(
         fix_hyphenation(
             remove_headers_footers(pages_text)
         )
     )
 
-    # Extract Images
+    # ✅ Extract Images
     images = []
     for page_num in range(doc.page_count):
         for img in doc[page_num].get_images(full=True):
@@ -76,7 +78,7 @@ def extract_pdf(pdf_source):
             image.save(img_path)
             images.append({"page": page_num + 1, "path": img_path})
 
-    # Extract Tables
+    # ✅ Extract Tables
     tables = []
     for i, page in enumerate(pdfplumber_obj.pages):
         for idx, table in enumerate(page.extract_tables()):
