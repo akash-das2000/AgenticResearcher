@@ -16,6 +16,11 @@
     <main>
         {% block content %}
         <!-- Page-specific content goes here -->
+        <!-- Load PDF.js -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+        <script>
+            window.pdfjsLib = window['pdfjs-dist/build/pdf'];
+        </script>
         {% endblock %}
     </main>
 
