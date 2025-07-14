@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = new FormData();
         formData.append('pdf_file', selectedFile);
 
-        fetch('/api/upload/', {
+        fetch('https://agenticresearcher.onrender.com/api/upload/', {
             method: 'POST',
             headers: {
                 'X-CSRFToken': '{{ csrf_token }}'
