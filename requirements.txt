@@ -27,3 +27,6 @@ pandas>=2.1
 
 # 🧹 Optional
 # python-decouple (if we later want .env file support)
+
+whitenoise>=6.6.0
+
