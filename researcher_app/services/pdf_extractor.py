@@ -23,21 +23,33 @@ os.makedirs(TABLES_DIR, exist_ok=True)
 
 
 
-def extract_pdf(uploaded_file):
+def extract_pdf(pdf_path):
     """
-    Extracts text, images, and tables from an in-memory uploaded PDF file.
-    """
-    # ✅ Save BytesIO to a temporary file
-    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_file:
-        tmp_file.write(uploaded_file.read())
-        tmp_path = tmp_file.name
+    Extracts text, images, and tables from PDF.
 
+    Args:
+        pdf_path (str): Absolute path to PDF file.
+
+    Returns:
+        dict: {"text": str, "images": [paths], "tables": [paths]}
+    """
+    print(f"DEBUG: Starting PDF extraction for {pdf_path}")
     try:
-        doc = fitz.open(tmp_path)
+        # ✅ Ensure path is string
+        pdf_path = str(pdf_path)
+
+        # ✅ Open PDF with PyMuPDF
+        doc = fitz.open(pdf_path)
 
         # ✅ OCR Text
-        pages = convert_from_path(tmp_path)
         pages_text = []
+        try:
+            pages = convert_from_path(pdf_path)
+        except Exception as e:
+            print(f"WARNING: convert_from_path fallback failed: {e}")
+            with open(pdf_path, "rb") as f:
+                pages = convert_from_path(f)
+
         for page in pages:
             text = pytesseract.image_to_string(page)
             pages_text.append(text)
@@ -66,7 +78,7 @@ def extract_pdf(uploaded_file):
 
         # ✅ Extract Tables
         tables = []
-        with pdfplumber.open(tmp_path) as pdf:
+        with pdfplumber.open(pdf_path) as pdf:
             for i, page in enumerate(pdf.pages):
                 for idx, table in enumerate(page.extract_tables() or []):
                     df = pd.DataFrame(table[1:], columns=table[0])
@@ -77,9 +89,10 @@ def extract_pdf(uploaded_file):
 
         return {"text": cleaned_text, "images": images, "tables": tables}
 
-    finally:
-        # ✅ Clean up temporary file
-        os.remove(tmp_path)
+    except Exception as e:
+        print(f"ERROR parsing PDF: {e}")
+        raise e
+
 
 
 
