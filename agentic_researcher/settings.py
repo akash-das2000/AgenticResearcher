@@ -11,7 +11,7 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'super-secret-key-for-dev')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['*']  # Update with your domain on Render
+ALLOWED_HOSTS = ['*']  # Update this in production (e.g., yourapp.onrender.com)
 
 # Application definition
 INSTALLED_APPS = [
@@ -22,7 +22,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'researcher_app',  # Your app
+    'researcher_app',
 ]
 
 MIDDLEWARE = [
@@ -55,10 +55,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'agentic_researcher.wsgi.application'
 
-# 🔥 DATABASE CONFIG: PostgreSQL via dj-database-url
+# 🔥 DATABASE CONFIG: PostgreSQL for Render, SQLite fallback for local dev
 DATABASES = {
     'default': dj_database_url.config(
-        default='postgres://localhost:5432/agentic_db'  # fallback for local dev
+        default='sqlite:///' + str(BASE_DIR / 'db.sqlite3')
     )
 }
 
@@ -78,11 +78,11 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Media files (PDFs, images, tables)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
