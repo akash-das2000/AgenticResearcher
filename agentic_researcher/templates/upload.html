@@ -96,7 +96,8 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.id && data.url) {
                 uploadedPdfId = data.id;
-                uploadStatus.innerHTML = `<span class="success">✅ Upload successful!</span> PDF ID: ${data.id}`;
+                //uploadStatus.innerHTML = `<span class="success">✅ Upload successful!</span> PDF ID: ${data.id}`;
+                uploadStatus.innerHTML = `<span class="success">✅ Upload successful!</span>`;
                 renderPDF(data.url);
                 showPostUploadActions();
             } else {
