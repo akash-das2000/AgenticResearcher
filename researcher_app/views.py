@@ -23,18 +23,19 @@ class UploadPDFView(APIView):
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, *args, **kwargs):
-        print("DEBUG: request.data =", request.data)  # ✅ Debug
-        print("DEBUG: request.FILES =", request.FILES)  # ✅ Debug
+        print("DEBUG: request.data =", request.data)
+        print("DEBUG: request.FILES =", request.FILES)
 
-        # Combine data and files
-        serializer = UploadedPDFSerializer(data=request.data, files=request.FILES)
+        # ✅ Only use data=request.data
+        serializer = UploadedPDFSerializer(data=request.data)
+
         if serializer.is_valid():
             pdf = serializer.save()
             return Response({
                 "id": pdf.id,
-                "url": pdf.file.url  # ✅ Changed from "file_url" to "url"
+                "url": pdf.file.url
             }, status=status.HTTP_201_CREATED)
-        print("DEBUG: serializer errors =", serializer.errors)  # ✅ Debug
+        print("DEBUG: serializer errors =", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
