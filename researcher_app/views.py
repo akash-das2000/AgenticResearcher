@@ -181,3 +181,30 @@ def upload_page(request):
     Renders the upload page for PDFs.
     """
     return render(request, 'upload.html')
+
+def chat_page(request, pk):
+    """
+    Renders the Chat with PDF page.
+    """
+    return render(request, 'chat.html', {'pdf_id': pk})
+
+
+def blog_page(request, pk):
+    """
+    Renders the Blog creation page.
+    """
+    return render(request, 'blog.html', {'pdf_id': pk})
+
+
+def ppt_page(request, pk):
+    """
+    Renders the PPT creation page.
+    """
+    return render(request, 'ppt.html', {'pdf_id': pk})
+
+
+def poster_page(request, pk):
+    """
+    Renders the Poster creation page.
+    """
+    return render(request, 'poster.html', {'pdf_id': pk})
