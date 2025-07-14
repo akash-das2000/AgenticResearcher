@@ -20,7 +20,7 @@ from io import BytesIO
 
 class UploadPDFView(APIView):
     """
-    API to upload a PDF and immediately parse it from memory.
+    API to upload a PDF and parse directly from memory.
     """
     parser_classes = [MultiPartParser, FormParser]
 
@@ -29,20 +29,20 @@ class UploadPDFView(APIView):
         print("DEBUG: request.FILES =", request.FILES)
 
         serializer = UploadedPDFSerializer(data=request.data)
-
         if serializer.is_valid():
-            parse_status = "success"
             try:
-                # Read file directly from request.FILES
                 uploaded_file = request.FILES['file']
+                # Save PDF to DB
+                pdf = serializer.save()
+                
+                # ✅ Read PDF content into memory
                 pdf_stream = BytesIO(uploaded_file.read())
-                pdf_stream.name = uploaded_file.name  # 👈 Add dummy filename
-
-                # Pass BytesIO to extractor
+                pdf_stream.name = uploaded_file.name  # Give dummy filename for libraries
+                
+                # ✅ Parse PDF directly from memory
                 result = pdf_extractor.extract_pdf(pdf_stream)
 
-                # Save parsed content
-                pdf = serializer.save()  # Save UploadedPDF model
+                # ✅ Save extracted content
                 ExtractedContent.objects.update_or_create(
                     pdf=pdf,
                     defaults={
@@ -51,11 +51,11 @@ class UploadPDFView(APIView):
                         "tables": result['tables']
                     }
                 )
+                parse_status = "success"
             except Exception as e:
                 print("ERROR parsing PDF:", str(e))
                 parse_status = "failed"
-                pdf = serializer.save()  # Save UploadedPDF anyway
-
+            
             return Response({
                 "id": pdf.id,
                 "url": pdf.file.url,
