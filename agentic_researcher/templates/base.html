@@ -16,11 +16,6 @@
     <main>
         {% block content %}
         <!-- Page-specific content goes here -->
-        <!-- Load PDF.js -->
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-        <script>
-            window.pdfjsLib = window['pdfjs-dist/build/pdf'];
-        </script>
         {% endblock %}
     </main>
 
@@ -28,7 +23,13 @@
         <p>&copy; 2025 Agentic Researcher. All rights reserved.</p>
     </footer>
 
-    <script src="https://mozilla.github.io/pdf.js/build/pdf.js"></script>
+    <!-- ✅ Load PDF.js from official CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        // ✅ Expose pdfjsLib globally
+        window.pdfjsLib = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
 
     {% block extra_scripts %}
     <!-- Page-specific scripts will be injected here -->
