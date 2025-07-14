@@ -44,7 +44,7 @@ ROOT_URLCONF = 'agentic_researcher.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [BASE_DIR / 'agentic_researcher/templates'],
         'APP_DIRS': True,  # ✅ Use app templates (researcher_app/templates)
         'OPTIONS': {
             'context_processors': [
