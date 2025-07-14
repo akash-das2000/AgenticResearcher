@@ -97,3 +97,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # LLM API keys (Optional)
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+
+CORS_ALLOW_ALL_ORIGINS = True  # For testing only
