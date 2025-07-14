@@ -1,17 +1,19 @@
+# agentic_researcher/settings.py
+
 import os
 from pathlib import Path
 import dj_database_url
 
-# Build paths
+# Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
+# SECURITY WARNING: keep the secret key used in production!
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'super-secret-key-for-dev')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['*']  # Update this in production (e.g., yourapp.onrender.com)
+ALLOWED_HOSTS = ['*']  # Change to your Render domain in production
 
 # Application definition
 INSTALLED_APPS = [
@@ -22,12 +24,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'researcher_app',
+    'researcher_app',  # Your main app
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # ✅ Add Whitenoise here
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # ✅ Enable Whitenoise
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -41,8 +43,7 @@ ROOT_URLCONF = 'agentic_researcher.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
-        'APP_DIRS': True,
+        'APP_DIRS': True,  # ✅ Use app templates (researcher_app/templates)
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -56,10 +57,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'agentic_researcher.wsgi.application'
 
-# 🔥 DATABASE CONFIG: Postgres only (no SQLite fallback)
+# Database
 DATABASES = {
     'default': dj_database_url.parse(
-        'postgresql://agentic_researcher_db_user:jEOCYLcAJ0JlWF4e0MYuQuzxQWm3Iyr4@dpg-d1q8io7fte5s73d2i06g-a/agentic_researcher_db'
+        os.getenv('DATABASE_URL', 'postgresql://...')
     )
 }
 
@@ -80,17 +81,15 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-
-# ✅ Use Whitenoise compressed storage for static files
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Media files (PDFs, images, tables)
+# Media files (for PDFs, extracted images, etc.)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# 🌟 LLM API Keys
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+# LLM API keys (Optional)
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
