@@ -1,0 +1,30 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Django stuff
+*.log
+db.sqlite3
+/media/
+staticfiles/
+
+# Environment files
+.env
+
+# VSCode / PyCharm
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# Node (if you add frontend later)
+node_modules/
+
+# Python virtual environments
+venv/
+.env/
