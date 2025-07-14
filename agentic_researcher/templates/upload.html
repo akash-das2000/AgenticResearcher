@@ -1,17 +1,22 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="upload-container">
-    <div class="dropzone" id="dropzone">
-        <p>📂 Drag & drop your PDF here <br> or</p>
-        <form id="uploadForm">
-            {% csrf_token %}
-            <input type="file" id="pdfFile" name="pdf_file" accept="application/pdf" hidden>
-            <button type="button" id="selectFileBtn">Choose a PDF</button>
-            <button type="submit" id="uploadBtn" disabled>Upload PDF</button>
-        </form>
+<div class="split-container">
+    <div class="pdf-viewer" id="pdfViewer">
+        <p class="placeholder-text">📖 PDF preview will appear here after upload.</p>
     </div>
-    <div id="uploadStatus"></div>
+    <div class="upload-container">
+        <div class="dropzone" id="dropzone">
+            <p>📂 Drag & drop your PDF here <br> or</p>
+            <form id="uploadForm">
+                {% csrf_token %}
+                <input type="file" id="pdfFile" name="pdf_file" accept="application/pdf" hidden>
+                <button type="button" id="selectFileBtn">Choose a PDF</button>
+                <button type="submit" id="uploadBtn" disabled>Upload PDF</button>
+            </form>
+        </div>
+        <div id="uploadStatus"></div>
+    </div>
 </div>
 {% endblock %}
 
@@ -24,6 +29,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const uploadBtn = document.getElementById('uploadBtn');
     const uploadForm = document.getElementById('uploadForm');
     const uploadStatus = document.getElementById('uploadStatus');
+    const pdfViewer = document.getElementById('pdfViewer');
     let selectedFile = null;
 
     selectFileBtn.addEventListener('click', () => fileInput.click());
@@ -72,8 +78,9 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(data => {
-            if (data.id) {
+            if (data.id && data.url) {
                 uploadStatus.innerHTML = `<span class="success">✅ Upload successful!</span> PDF ID: ${data.id}`;
+                renderPDF(data.url);
             } else {
                 uploadStatus.innerHTML = `<span class="error">❌ Error: ${JSON.stringify(data)}</span>`;
             }
@@ -84,6 +91,31 @@ document.addEventListener('DOMContentLoaded', function() {
             uploadBtn.disabled = false;
         });
     });
+
+    function renderPDF(pdfUrl) {
+        const loadingTask = pdfjsLib.getDocument(pdfUrl);
+        loadingTask.promise.then(pdf => {
+            pdfViewer.innerHTML = ''; // Clear placeholder
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                pdf.getPage(pageNum).then(page => {
+                    const viewport = page.getViewport({ scale: 1.2 });
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    pdfViewer.appendChild(canvas);
+
+                    const renderContext = {
+                        canvasContext: context,
+                        viewport: viewport
+                    };
+                    page.render(renderContext);
+                });
+            }
+        }, error => {
+            pdfViewer.innerHTML = `<span class="error">❌ Failed to load PDF: ${error}</span>`;
+        });
+    }
 });
 </script>
 {% endblock %}
