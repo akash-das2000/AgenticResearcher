@@ -1,5 +1,54 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h2>Hello from Upload Page</h2>
+<div class="upload-container">
+    <h2>Upload a PDF</h2>
+    <form id="uploadForm">
+        {% csrf_token %}
+        <input type="file" id="pdfFile" name="pdf_file" accept="application/pdf" required>
+        <button type="submit" id="uploadBtn">Upload PDF</button>
+    </form>
+    <div id="uploadStatus"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadForm = document.getElementById('uploadForm');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const uploadStatus = document.getElementById('uploadStatus');
+
+    uploadForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        uploadStatus.innerHTML = "Uploading...";
+        uploadBtn.disabled = true;
+
+        const fileInput = document.getElementById('pdfFile');
+        const formData = new FormData();
+        formData.append('pdf_file', fileInput.files[0]);
+
+        fetch('/api/upload/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.id) {
+                uploadStatus.innerHTML = `<span class="success">✅ Upload successful!</span> PDF ID: ${data.id}`;
+            } else {
+                uploadStatus.innerHTML = `<span class="error">❌ Error: ${JSON.stringify(data)}</span>`;
+            }
+            uploadBtn.disabled = false;
+        })
+        .catch(error => {
+            uploadStatus.innerHTML = `<span class="error">❌ Upload failed: ${error}</span>`;
+            uploadBtn.disabled = false;
+        });
+    });
+});
+</script>
 {% endblock %}
