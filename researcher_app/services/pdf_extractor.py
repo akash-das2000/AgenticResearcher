@@ -22,28 +22,32 @@ os.makedirs(TABLES_DIR, exist_ok=True)
 
 def extract_pdf(pdf_source):
     """
-    Extracts text, images, and tables from PDF.
+    Extract text, images, and tables from PDF.
 
     Args:
-        pdf_source (str or file-like): Absolute path or file-like object.
+        pdf_source (str or file-like): Path or file-like object.
 
     Returns:
         dict: {"text": str, "images": [paths], "tables": [paths]}
     """
-    # Detect if input is path or file-like
+    # Rewind stream if needed
+    if hasattr(pdf_source, 'seek'):
+        pdf_source.seek(0)
+
     if isinstance(pdf_source, (str, bytes, os.PathLike)):
-        doc = fitz.open(pdf_source)  # path-based
+        # Path
+        doc = fitz.open(pdf_source)
         pdfplumber_obj = pdfplumber.open(pdf_source)
         images_source = pdf_source
     else:
-        # file-like object
+        # File-like object
         pdf_bytes = pdf_source.read()
-        pdf_source.seek(0)  # Reset pointer after read
+        pdf_source.seek(0)  # Reset after read
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         pdfplumber_obj = pdfplumber.open(io.BytesIO(pdf_bytes))
-        images_source = io.BytesIO(pdf_bytes)  # For OCR
+        images_source = io.BytesIO(pdf_bytes)
 
-    # ✅ OCR Text
+    # OCR Text
     pages = convert_from_path(images_source) if isinstance(images_source, str) else convert_from_path(images_source, fmt='pdf')
     pages_text = []
     for page in pages:
@@ -51,14 +55,14 @@ def extract_pdf(pdf_source):
         pages_text.append(text)
     full_text = "\n\n".join(pages_text)
 
-    # ✅ Clean Text
+    # Clean text
     cleaned_text = normalize_whitespace(
         fix_hyphenation(
             remove_headers_footers(pages_text)
         )
     )
 
-    # ✅ Extract Images
+    # Extract Images
     images = []
     for page_num in range(doc.page_count):
         for img in doc[page_num].get_images(full=True):
@@ -72,7 +76,7 @@ def extract_pdf(pdf_source):
             image.save(img_path)
             images.append({"page": page_num + 1, "path": img_path})
 
-    # ✅ Extract Tables
+    # Extract Tables
     tables = []
     for i, page in enumerate(pdfplumber_obj.pages):
         for idx, table in enumerate(page.extract_tables()):
@@ -84,6 +88,7 @@ def extract_pdf(pdf_source):
 
     pdfplumber_obj.close()
     return {"text": cleaned_text, "images": images, "tables": tables}
+
 
 
 
