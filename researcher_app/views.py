@@ -16,13 +16,15 @@ from .serializers import (
 from .services import pdf_extractor, outline, writer, formatter
 from io import BytesIO
 import tempfile
+import threading
+
 
 
 
 
 class UploadPDFView(APIView):
     """
-    API to upload a PDF and parse using a temp file (Render safe).
+    API to upload a PDF and parse in background.
     """
     parser_classes = [MultiPartParser, FormParser]
 
@@ -34,42 +36,39 @@ class UploadPDFView(APIView):
         if not uploaded_file:
             return Response({"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # ✅ Save to temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
-            for chunk in uploaded_file.chunks():
-                tmp_file.write(chunk)
-            tmp_file_path = tmp_file.name
-
-        # ✅ Parse PDF
-        parse_status = "success"
-        try:
-            result = pdf_extractor.extract_pdf(tmp_file_path)  # Pass temp file path
-        except Exception as e:
-            print(f"ERROR parsing PDF: {e}")
-            parse_status = "failed"
-            result = {"text": "", "images": [], "tables": []}
-
-        # ✅ Save UploadedPDF metadata
         serializer = UploadedPDFSerializer(data=request.data)
         if serializer.is_valid():
             pdf = serializer.save()
 
-            # ✅ Save extracted content
+            # ✅ Kick off parsing in background
+            threading.Thread(target=self.parse_pdf_background, args=(pdf, uploaded_file)).start()
+
+            return Response({
+                "id": pdf.id,
+                "url": pdf.file.url,
+                "parse_status": "pending"
+            }, status=status.HTTP_201_CREATED)
+        else:
+            print("DEBUG: serializer errors =", serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def parse_pdf_background(self, pdf, uploaded_file):
+        """
+        Background thread: parse PDF and save extracted content.
+        """
+        print(f"DEBUG: Background parsing for PDF {pdf.id}")
+        try:
+            result = pdf_extractor.extract_pdf(uploaded_file)
             ExtractedContent.objects.create(
                 pdf=pdf,
                 text=result['text'],
                 images=result['images'],
                 tables=result['tables']
             )
+            print(f"✅ Parsing complete for PDF {pdf.id}")
+        except Exception as e:
+            print(f"❌ Background parsing failed for PDF {pdf.id}: {e}")
 
-            return Response({
-                "id": pdf.id,
-                "url": pdf.file.url,
-                "parse_status": parse_status
-            }, status=status.HTTP_201_CREATED)
-        else:
-            print("DEBUG: serializer errors =", serializer.errors)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
