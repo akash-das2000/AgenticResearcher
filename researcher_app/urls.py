@@ -1,5 +1,6 @@
 # researcher_app/urls.py
 
+#Backend
 from django.urls import path
 from .views import (
     UploadPDFView, ExtractPDFView, GenerateOutlineView,
@@ -15,4 +16,15 @@ urlpatterns = [
     path('format/<int:pk>/', FormatBlogView.as_view(), name='format-blog'),
     path('chat/<int:pk>/', ChatWithPDFView.as_view(), name='chat-with-pdf'),
     path('rules/', NormalizationRuleView.as_view(), name='normalization-rules'),
+]
+
+#Frontend
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    # Existing API routes ...
+
+    # 👇 Frontend routes
+    path('upload/', views.upload_page, name='upload'),
 ]
