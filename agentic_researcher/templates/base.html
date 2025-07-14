@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Agentic Researcher</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- ✅ Mobile friendly -->
     <link rel="stylesheet" href="{% static 'css/main.css' %}">
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
 </head>
@@ -26,7 +27,6 @@
     <!-- ✅ Load PDF.js from official CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
-        // ✅ Expose pdfjsLib globally
         window.pdfjsLib = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
