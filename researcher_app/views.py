@@ -41,7 +41,7 @@ class UploadPDFView(APIView):
             pdf = serializer.save()
 
             # ✅ Kick off parsing in background
-            threading.Thread(target=self.parse_pdf_background, args=(pdf, uploaded_file)).start()
+            threading.Thread(target=parse_pdf_async, args=(pdf.id, uploaded_file)).start()
 
             return Response({
                 "id": pdf.id,
@@ -52,22 +52,24 @@ class UploadPDFView(APIView):
             print("DEBUG: serializer errors =", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def parse_pdf_background(self, pdf, uploaded_file):
-        """
-        Background thread: parse PDF and save extracted content.
-        """
-        print(f"DEBUG: Background parsing for PDF {pdf.id}")
+    def parse_pdf_async(pdf_id, uploaded_file):
+        print(f"DEBUG: Background parsing for PDF {pdf_id}")
         try:
-            result = pdf_extractor.extract_pdf(uploaded_file)
+            uploaded_file.seek(0)  # Reset pointer
+            result = pdf_extractor.extract_pdf(uploaded_file)  # Pass in-memory file
+            pdf = UploadedPDF.objects.get(id=pdf_id)
+    
             ExtractedContent.objects.create(
                 pdf=pdf,
                 text=result['text'],
                 images=result['images'],
                 tables=result['tables']
             )
-            print(f"✅ Parsing complete for PDF {pdf.id}")
+            print(f"✅ Background parsing completed for PDF {pdf_id}")
+    
         except Exception as e:
-            print(f"❌ Background parsing failed for PDF {pdf.id}: {e}")
+            print(f"❌ Background parsing failed for PDF {pdf_id}: {e}")
+
 
 
 
