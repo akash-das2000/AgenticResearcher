@@ -20,20 +20,31 @@ os.makedirs(IMAGES_DIR, exist_ok=True)
 os.makedirs(TABLES_DIR, exist_ok=True)
 
 
-def extract_pdf(pdf_path):
+def extract_pdf(pdf_source):
     """
     Extracts text, images, and tables from PDF.
 
     Args:
-        pdf_path (str): Absolute path to PDF file.
+        pdf_source (str or file-like): Absolute path or file-like object.
 
     Returns:
         dict: {"text": str, "images": [paths], "tables": [paths]}
     """
-    doc = fitz.open(pdf_path)
+    # Detect if input is path or file-like
+    if isinstance(pdf_source, (str, bytes, os.PathLike)):
+        doc = fitz.open(pdf_source)  # path-based
+        pdfplumber_obj = pdfplumber.open(pdf_source)
+        images_source = pdf_source
+    else:
+        # file-like object
+        pdf_bytes = pdf_source.read()
+        pdf_source.seek(0)  # Reset pointer after read
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        pdfplumber_obj = pdfplumber.open(io.BytesIO(pdf_bytes))
+        images_source = io.BytesIO(pdf_bytes)  # For OCR
 
     # ✅ OCR Text
-    pages = convert_from_path(pdf_path)
+    pages = convert_from_path(images_source) if isinstance(images_source, str) else convert_from_path(images_source, fmt='pdf')
     pages_text = []
     for page in pages:
         text = pytesseract.image_to_string(page)
@@ -63,16 +74,17 @@ def extract_pdf(pdf_path):
 
     # ✅ Extract Tables
     tables = []
-    with pdfplumber.open(pdf_path) as pdf:
-        for i, page in enumerate(pdf.pages):
-            for idx, table in enumerate(page.extract_tables()):
-                df = pd.DataFrame(table[1:], columns=table[0])
-                table_filename = f"table_{i+1}_{idx+1}.csv"
-                table_path = os.path.join(TABLES_DIR, table_filename)
-                df.to_csv(table_path, index=False)
-                tables.append({"page": i + 1, "path": table_path})
+    for i, page in enumerate(pdfplumber_obj.pages):
+        for idx, table in enumerate(page.extract_tables()):
+            df = pd.DataFrame(table[1:], columns=table[0])
+            table_filename = f"table_{i+1}_{idx+1}.csv"
+            table_path = os.path.join(TABLES_DIR, table_filename)
+            df.to_csv(table_path, index=False)
+            tables.append({"page": i + 1, "path": table_path})
 
+    pdfplumber_obj.close()
     return {"text": cleaned_text, "images": images, "tables": tables}
+
 
 
 # 🔥 Helpers
