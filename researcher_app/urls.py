@@ -6,6 +6,9 @@ from .views import (
     DraftSectionView, FormatBlogView, ChatWithPDFView,
     NormalizationRuleView, upload_page
 )
+from django.conf import settings
+from django.conf.urls.static import static
+
 
 urlpatterns = [
     # Backend API routes
@@ -18,3 +21,8 @@ urlpatterns = [
     path('api/rules/', NormalizationRuleView.as_view(), name='normalization-rules'),
 
 ]
+
+
+
+# Serve media files (PDFs) during development & on Render
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
