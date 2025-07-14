@@ -18,7 +18,7 @@ from .services import pdf_extractor, outline, writer, formatter
 
 class UploadPDFView(APIView):
     """
-    API to upload a PDF.
+    API to upload a PDF and immediately parse it.
     """
     parser_classes = [MultiPartParser, FormParser]
 
@@ -26,15 +26,34 @@ class UploadPDFView(APIView):
         print("DEBUG: request.data =", request.data)
         print("DEBUG: request.FILES =", request.FILES)
 
-        # ✅ Only use data=request.data
         serializer = UploadedPDFSerializer(data=request.data)
-
         if serializer.is_valid():
             pdf = serializer.save()
+            try:
+                # ✅ Parse PDF directly from uploaded file (request.FILES)
+                uploaded_file = request.FILES.get('file')
+                result = pdf_extractor.extract_pdf(uploaded_file)
+                
+                # ✅ Save extracted content to DB
+                content_obj, created = ExtractedContent.objects.update_or_create(
+                    pdf=pdf,
+                    defaults={
+                        "text": result.get('text', ''),
+                        "images": result.get('images', []),
+                        "tables": result.get('tables', [])
+                    }
+                )
+                parse_status = "success"
+            except Exception as e:
+                print("ERROR parsing PDF:", e)
+                parse_status = "failed"
+
             return Response({
                 "id": pdf.id,
-                "url": pdf.file.url
+                "url": pdf.file.url,
+                "parse_status": parse_status
             }, status=status.HTTP_201_CREATED)
+        
         print("DEBUG: serializer errors =", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
