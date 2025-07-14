@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.id && data.url) {
                 uploadStatus.innerHTML = `<span class="success">✅ Upload successful!</span> PDF ID: ${data.id}`;
-                renderPDF(data.url);
+                renderPDF(data.url); // ✅ Load PDF into viewer
             } else {
                 uploadStatus.innerHTML = `<span class="error">❌ Error: ${JSON.stringify(data)}</span>`;
             }
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
             pdfViewer.innerHTML = ''; // Clear placeholder
             for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
                 pdf.getPage(pageNum).then(page => {
-                    const viewport = page.getViewport({ scale: 1.2 });
+                    const viewport = page.getViewport({ scale: 1.0 });
                     const canvas = document.createElement('canvas');
                     const context = canvas.getContext('2d');
                     canvas.height = viewport.height;
