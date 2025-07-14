@@ -26,7 +26,10 @@ class UploadPDFView(APIView):
         serializer = UploadedPDFSerializer(data=request.data)
         if serializer.is_valid():
             pdf = serializer.save()
-            return Response({"id": pdf.id, "file_url": pdf.file.url}, status=status.HTTP_201_CREATED)
+            return Response({
+                "id": pdf.id,
+                "url": pdf.file.url  # ✅ Changed from "file_url" to "url"
+            }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
