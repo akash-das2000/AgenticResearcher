@@ -17,9 +17,10 @@ from .services import pdf_extractor, outline, writer, formatter
 from io import BytesIO
 
 
+
 class UploadPDFView(APIView):
     """
-    API to upload a PDF and immediately parse it.
+    API to upload a PDF and immediately parse it from memory.
     """
     parser_classes = [MultiPartParser, FormParser]
 
@@ -27,17 +28,17 @@ class UploadPDFView(APIView):
         print("DEBUG: request.data =", request.data)
         print("DEBUG: request.FILES =", request.FILES)
 
-        # Create serializer but don’t save yet
         serializer = UploadedPDFSerializer(data=request.data)
 
         if serializer.is_valid():
             parse_status = "success"
             try:
-                # Get file directly from memory
+                # Read file directly from request.FILES
                 uploaded_file = request.FILES['file']
                 pdf_stream = BytesIO(uploaded_file.read())
+                pdf_stream.name = uploaded_file.name  # 👈 Add dummy filename
 
-                # Parse PDF content directly from BytesIO
+                # Pass BytesIO to extractor
                 result = pdf_extractor.extract_pdf(pdf_stream)
 
                 # Save parsed content
@@ -50,11 +51,10 @@ class UploadPDFView(APIView):
                         "tables": result['tables']
                     }
                 )
-
             except Exception as e:
                 print("ERROR parsing PDF:", str(e))
                 parse_status = "failed"
-                pdf = serializer.save()  # Save UploadedPDF anyway for later retries
+                pdf = serializer.save()  # Save UploadedPDF anyway
 
             return Response({
                 "id": pdf.id,
