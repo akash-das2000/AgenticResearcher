@@ -1,1 +1,1 @@
-researcher_app/migrations/__init__.py
+#researcher_app/migrations/__init__.py
