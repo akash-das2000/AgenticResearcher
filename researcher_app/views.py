@@ -25,40 +25,40 @@ class UploadPDFView(APIView):
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, *args, **kwargs):
-    print("DEBUG: request.data =", request.data)
-    print("DEBUG: request.FILES =", request.FILES)
+        print("DEBUG: request.data =", request.data)
+        print("DEBUG: request.FILES =", request.FILES)
 
-    uploaded_file = request.FILES.get('file')
-    if not uploaded_file:
-        return Response({"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST)
+        uploaded_file = request.FILES.get('file')
+        if not uploaded_file:
+            return Response({"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST)
 
-    # ✅ Parse PDF directly from uploaded file (before saving)
-    try:
-        result = pdf_extractor.extract_pdf(uploaded_file)
-    except Exception as e:
-        print(f"ERROR parsing PDF: {e}")
-        return Response({"error": f"PDF parsing failed: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # ✅ Parse PDF directly from uploaded file (before saving)
+        try:
+            result = pdf_extractor.extract_pdf(uploaded_file)
+        except Exception as e:
+            print(f"ERROR parsing PDF: {e}")
+            return Response({"error": f"PDF parsing failed: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    # ✅ Save UploadedPDF metadata
-    serializer = UploadedPDFSerializer(data=request.data)
-    if serializer.is_valid():
-        pdf = serializer.save()
+        # ✅ Save UploadedPDF metadata
+        serializer = UploadedPDFSerializer(data=request.data)
+        if serializer.is_valid():
+            pdf = serializer.save()
 
-        # ✅ Save extracted content to DB
-        ExtractedContent.objects.create(
-            pdf=pdf,
-            text=result['text'],
-            images=result['images'],
-            tables=result['tables']
-        )
+            # ✅ Save extracted content to DB
+            ExtractedContent.objects.create(
+                pdf=pdf,
+                text=result['text'],
+                images=result['images'],
+                tables=result['tables']
+            )
 
-        return Response({
-            "id": pdf.id,
-            "url": pdf.file.url
-        }, status=status.HTTP_201_CREATED)
-    else:
-        print("DEBUG: serializer errors =", serializer.errors)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                "id": pdf.id,
+                "url": pdf.file.url
+            }, status=status.HTTP_201_CREATED)
+        else:
+            print("DEBUG: serializer errors =", serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
