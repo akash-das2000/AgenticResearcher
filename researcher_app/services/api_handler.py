@@ -3,23 +3,25 @@
 import os
 import openai
 from google import genai
-from django.conf import settings
 
-# ✅ Load API Keys from Django settings
+# 🚨 Load API Keys
 OPENAI_API_KEY = getattr(settings, "OPENAI_API_KEY", None)
 GEMINI_API_KEY = getattr(settings, "GEMINI_API_KEY", None)
 
 # ✅ Initialize OpenAI
 if OPENAI_API_KEY:
     openai.api_key = OPENAI_API_KEY
+    print("✅ OpenAI API key loaded.")
 else:
-    raise ValueError("❌ OpenAI API key not found in settings.")
+    print("❌ OpenAI API key missing!")
 
 # ✅ Initialize Gemini
 if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+    client = genai.Client(api_key=GEMINI_API_KEY)
+    print("✅ Gemini API key loaded.")
 else:
-    raise ValueError("❌ Gemini API key not found in settings.")
+    client = None
+    print("❌ Gemini API key missing!")
 
 # 📜 Unified LLM call function
 def call_llm(prompt, preferred="gemini", model_openai="gpt-4o", model_gemini="gemini-2.5-pro"):
@@ -37,28 +39,29 @@ def call_llm(prompt, preferred="gemini", model_openai="gpt-4o", model_gemini="ge
     """
     try:
         if preferred == "gemini":
+            if not client:
+                raise ValueError("Gemini client not initialized.")
             print(f"🌟 Using Gemini API ({model_gemini})...")
-            response = genai.generate_text(
+            response = client.models.generate_content(
                 model=model_gemini,
-                prompt=prompt,
-                temperature=0.7,
-                max_output_tokens=2048
+                contents=prompt
             )
-            return response.result
+            return response.text
         elif preferred == "openai":
+            if not OPENAI_API_KEY:
+                raise ValueError("OpenAI API key missing.")
             print(f"🌟 Using OpenAI API ({model_openai})...")
-            response = openai.ChatCompletion.create(
+            response = openai.chat.completions.create(
                 model=model_openai,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=2048,
                 temperature=0.7
             )
-            return response['choices'][0]['message']['content']
+            return response.choices[0].message.content
         else:
             raise ValueError("Preferred API must be 'gemini' or 'openai'")
     except Exception as e:
         print(f"⚠️ {preferred} API failed: {e}")
-        # 🔄 Fallback to the other API
         fallback = "openai" if preferred == "gemini" else "gemini"
         print(f"🔄 Falling back to {fallback} API...")
         return call_llm(prompt, preferred=fallback, model_openai=model_openai, model_gemini=model_gemini)
