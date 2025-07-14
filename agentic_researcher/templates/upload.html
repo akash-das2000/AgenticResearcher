@@ -92,7 +92,13 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: {'X-CSRFToken': '{{ csrf_token }}'},
             body: formData
         })
-        .then(response => response.json())
+        .then(async response => {
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Server error (${response.status}): ${errorText}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.id && data.url) {
                 uploadedPdfId = data.id;
@@ -113,7 +119,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error("Upload error:", error);
-            uploadStatus.innerHTML = `<span class="error">❌ Upload failed: ${error}</span>`;
+            uploadStatus.innerHTML = `<span class="error">❌ Upload failed: ${error.message}</span>`;
             uploadBtn.disabled = false;
         });
     });
