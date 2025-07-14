@@ -19,14 +19,10 @@ import tempfile
 import threading
 
 
-def parse_pdf_async(pdf_id, uploaded_file):
-    """
-    Background task to parse PDF after upload.
-    """
+def parse_pdf_async(pdf_id, file_path):
     print(f"DEBUG: Background parsing for PDF {pdf_id}")
     try:
-        uploaded_file.seek(0)  # Reset pointer in case it's been read
-        result = pdf_extractor.extract_pdf(uploaded_file)  # Pass in-memory file
+        result = pdf_extractor.extract_pdf(file_path)  # Pass file path, not in-memory file
         pdf = UploadedPDF.objects.get(id=pdf_id)
 
         ExtractedContent.objects.create(
@@ -39,6 +35,7 @@ def parse_pdf_async(pdf_id, uploaded_file):
 
     except Exception as e:
         print(f"❌ Background parsing failed for PDF {pdf_id}: {e}")
+
 
 
 class UploadPDFView(APIView):
@@ -60,7 +57,7 @@ class UploadPDFView(APIView):
             pdf = serializer.save()
 
             # ✅ Kick off parsing in background
-            threading.Thread(target=parse_pdf_async, args=(pdf.id, uploaded_file)).start()
+            threading.Thread(target=parse_pdf_async, args=(pdf.id, pdf.file.path)).start()
 
             return Response({
                 "id": pdf.id,
