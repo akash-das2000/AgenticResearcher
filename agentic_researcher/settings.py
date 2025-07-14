@@ -57,10 +57,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'agentic_researcher.wsgi.application'
 
-# Database
+# 🔥 DATABASE CONFIG: Postgres only (no SQLite fallback)
 DATABASES = {
     'default': dj_database_url.parse(
-        os.getenv('DATABASE_URL', 'postgresql://...')
+        'postgresql://agentic_researcher_db_user:jEOCYLcAJ0JlWF4e0MYuQuzxQWm3Iyr4@dpg-d1q8io7fte5s73d2i06g-a/agentic_researcher_db'
     )
 }
 
