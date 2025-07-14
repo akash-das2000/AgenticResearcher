@@ -25,43 +25,38 @@ class UploadPDFView(APIView):
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, *args, **kwargs):
-        print("DEBUG: request.data =", request.data)
-        print("DEBUG: request.FILES =", request.FILES)
+    print("DEBUG: request.data =", request.data)
+    print("DEBUG: request.FILES =", request.FILES)
 
-        serializer = UploadedPDFSerializer(data=request.data)
-        if serializer.is_valid():
-            try:
-                uploaded_file = request.FILES['file']
-                # Save PDF to DB
-                pdf = serializer.save()
-                
-                # ✅ Read PDF content into memory
-                pdf_stream = BytesIO(uploaded_file.read())
-                pdf_stream.name = uploaded_file.name  # Give dummy filename for libraries
-                
-                # ✅ Parse PDF directly from memory
-                result = pdf_extractor.extract_pdf(pdf_stream)
+    uploaded_file = request.FILES.get('file')
+    if not uploaded_file:
+        return Response({"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST)
 
-                # ✅ Save extracted content
-                ExtractedContent.objects.update_or_create(
-                    pdf=pdf,
-                    defaults={
-                        "text": result['text'],
-                        "images": result['images'],
-                        "tables": result['tables']
-                    }
-                )
-                parse_status = "success"
-            except Exception as e:
-                print("ERROR parsing PDF:", str(e))
-                parse_status = "failed"
-            
-            return Response({
-                "id": pdf.id,
-                "url": pdf.file.url,
-                "parse_status": parse_status
-            }, status=status.HTTP_201_CREATED)
+    # ✅ Parse PDF directly from uploaded file (before saving)
+    try:
+        result = pdf_extractor.extract_pdf(uploaded_file)
+    except Exception as e:
+        print(f"ERROR parsing PDF: {e}")
+        return Response({"error": f"PDF parsing failed: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    # ✅ Save UploadedPDF metadata
+    serializer = UploadedPDFSerializer(data=request.data)
+    if serializer.is_valid():
+        pdf = serializer.save()
+
+        # ✅ Save extracted content to DB
+        ExtractedContent.objects.create(
+            pdf=pdf,
+            text=result['text'],
+            images=result['images'],
+            tables=result['tables']
+        )
+
+        return Response({
+            "id": pdf.id,
+            "url": pdf.file.url
+        }, status=status.HTTP_201_CREATED)
+    else:
         print("DEBUG: serializer errors =", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
