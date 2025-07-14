@@ -2,7 +2,7 @@
 
 import os
 import openai
-from google import generativeai as genai
+from google import genai
 from django.conf import settings
 
 # ✅ Load API Keys from Django settings
