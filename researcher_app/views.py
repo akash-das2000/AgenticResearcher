@@ -22,7 +22,8 @@ import threading
 def parse_pdf_async(pdf_id, file_path):
     print(f"DEBUG: Background parsing for PDF {pdf_id}")
     try:
-        result = pdf_extractor.extract_pdf(file_path)  # Pass file path, not in-memory file
+        with open(file_path, 'rb') as f:
+            result = pdf_extractor.extract_pdf(f)  # ✅ Pass file-like object
         pdf = UploadedPDF.objects.get(id=pdf_id)
 
         ExtractedContent.objects.create(
@@ -35,6 +36,7 @@ def parse_pdf_async(pdf_id, file_path):
 
     except Exception as e:
         print(f"❌ Background parsing failed for PDF {pdf_id}: {e}")
+
 
 
 
