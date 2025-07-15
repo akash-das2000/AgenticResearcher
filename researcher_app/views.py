@@ -23,7 +23,8 @@ def parse_pdf_async(pdf_id, file_path):
     print(f"DEBUG: Background parsing for PDF {pdf_id}")
     try:
         with open(file_path, 'rb') as f:
-            result = pdf_extractor.extract_pdf(f)  # ✅ Pass file-like object
+            print(f"DEBUG: Starting PDF extraction for {file_path}")
+            result = pdf_extractor.extract_pdf(f)
         pdf = UploadedPDF.objects.get(id=pdf_id)
 
         ExtractedContent.objects.create(
@@ -36,6 +37,7 @@ def parse_pdf_async(pdf_id, file_path):
 
     except Exception as e:
         print(f"❌ Background parsing failed for PDF {pdf_id}: {e}")
+
 
 
 
