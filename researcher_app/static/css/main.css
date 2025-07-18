@@ -196,6 +196,28 @@ button:disabled,
     }
 }
 
+/* ─── Sticky header ───────────────────────────────────────────────────────── */
+/* keeps your “Agentic Researcher” title always on top */
+.site-header {
+  position: sticky;
+  top: 0;
+  background: #f8f9fa; /* match your page bg */
+  padding: 1rem 0;
+  z-index: 1000;
+}
+
+/* ─── Sticky footer ───────────────────────────────────────────────────────── */
+/* keeps your copyright centered at the bottom */
+.site-footer {
+  position: sticky;
+  bottom: 0;
+  background: #f8f9fa;
+  padding: 1rem 0;
+  text-align: center;
+  width: 100%;
+  z-index: 1000;
+}
+
 /* ─── Responsive Adjustments ────────────────────────────────────────────── */
 @media (max-width: 768px) {
     .split-container {
