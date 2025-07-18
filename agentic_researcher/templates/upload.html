@@ -163,23 +163,28 @@ document.addEventListener('DOMContentLoaded', () => {
   // PDF preview
   function renderPDF(url) {
     pdfViewer.innerHTML = '';
-    pdfjsLib.getDocument(url).promise
-      .then(pdf => {
-        for (let i = 1; i <= pdf.numPages; i++) {
-          pdf.getPage(i).then(page => {
-            const vp = page.getViewport({ scale: 1.0 });
-            const cnv = document.createElement('canvas');
-            cnv.width = vp.width; cnv.height = vp.height;
-            pdfViewer.appendChild(cnv);
-            page.render({ canvasContext: cnv.getContext('2d'), viewport: vp });
+    pdfjsLib.getDocument(url).promise.then(pdf => {
+      for (let i = 1; i <= pdf.numPages; i++) {
+        pdf.getPage(i).then(page => {
+          // calculate scale to fill container width
+          const containerWidth = pdfViewer.clientWidth;
+          const viewport0     = page.getViewport({ scale: 1 });
+          const scale         = containerWidth / viewport0.width;
+          const viewport      = page.getViewport({ scale });
+  
+          const cnv = document.createElement('canvas');
+          cnv.width  = viewport.width;
+          cnv.height = viewport.height;
+          pdfViewer.appendChild(cnv);
+          page.render({
+            canvasContext: cnv.getContext('2d'),
+            viewport
           });
-        }
-      })
-      .catch(err => {
-        console.error(err);
-        pdfViewer.innerHTML = `<span class="error">❌ Failed to load PDF</span>`;
-      });
+        });
+      }
+    });
   }
+
 
   // Show final “Next Actions”
   function showPostUploadActions() {
