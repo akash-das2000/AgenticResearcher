@@ -26,20 +26,28 @@ os.makedirs(TABLES_DIR, exist_ok=True)
 def extract_pdf(file_or_path):
     """
     Extracts text, images, and tables from a PDF file.
+
     Supports both:
     - file_or_path = str (path to PDF file)
     - file_or_path = file-like object (BytesIO, UploadedFile)
     """
+    import traceback
+
     cleanup_temp = False
 
     # ✅ Detect if file_or_path is a path or file-like object
     if isinstance(file_or_path, str):
         pdf_source = file_or_path
     elif hasattr(file_or_path, "read"):  # file-like object
-        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_file:
-            tmp_file.write(file_or_path.read())
-            pdf_source = tmp_file.name
-        cleanup_temp = True
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_file:
+                tmp_file.write(file_or_path.read())
+                pdf_source = tmp_file.name
+            cleanup_temp = True
+        except Exception as e:
+            print(f"❌ Failed to create temp file: {e}")
+            traceback.print_exc()
+            raise
     else:
         raise ValueError("Invalid file_or_path: expected path or file-like object")
 
@@ -48,19 +56,23 @@ def extract_pdf(file_or_path):
     try:
         # ✅ Process with fitz (PyMuPDF)
         doc = fitz.open(pdf_source)
+        print(f"DEBUG: PDF loaded successfully with {doc.page_count} pages")
 
         # ✅ OCR Text (low DPI to save memory)
         pages = convert_from_path(pdf_source, dpi=72)
         pages_text = []
-        for page in pages:
+        for page_num, page in enumerate(pages, 1):
             text = pytesseract.image_to_string(page)
             pages_text.append(text)
+            print(f"DEBUG: OCR text extracted for page {page_num}")
+
         full_text = "\n\n".join(pages_text)
 
         # ✅ Clean Text
         cleaned_text = normalize_whitespace(
             fix_hyphenation(remove_headers_footers(pages_text))
         )
+        print(f"DEBUG: Cleaned text length = {len(cleaned_text)}")
 
         # ✅ Extract Images
         images = []
@@ -75,6 +87,7 @@ def extract_pdf(file_or_path):
                 img_path = os.path.join(IMAGES_DIR, img_filename)
                 image.save(img_path)
                 images.append({"page": page_num + 1, "path": img_path})
+        print(f"DEBUG: Total images extracted = {len(images)}")
 
         # ✅ Extract Tables
         tables = []
@@ -86,16 +99,22 @@ def extract_pdf(file_or_path):
                     table_path = os.path.join(TABLES_DIR, table_filename)
                     df.to_csv(table_path, index=False)
                     tables.append({"page": i + 1, "path": table_path})
+        print(f"DEBUG: Total tables extracted = {len(tables)}")
 
         return {"text": cleaned_text, "images": images, "tables": tables}
 
     except Exception as e:
         print(f"❌ extract_pdf failed: {e}")
+        traceback.print_exc()
         return {"text": "", "images": [], "tables": []}
 
     finally:
         if cleanup_temp and os.path.exists(pdf_source):
-            os.remove(pdf_source)
+            try:
+                os.remove(pdf_source)
+                print(f"DEBUG: Temp file {pdf_source} deleted")
+            except Exception as cleanup_err:
+                print(f"⚠️ Failed to delete temp file: {cleanup_err}")
 
 
 
