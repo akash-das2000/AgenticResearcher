@@ -23,8 +23,8 @@ def parse_pdf_async(pdf_id, file_path):
     print(f"DEBUG: Background parsing for PDF {pdf_id}")
     try:
         print(f"DEBUG: Starting extraction for {file_path}")
-        result = pdf_extractor.extract_pdf(file_path)  # Pass file path
-        print(f"DEBUG: Extraction result keys: {result.keys()}")
+        result = pdf_extractor.extract_pdf(file_path)
+        print(f"DEBUG: Extraction result - text len={len(result['text'])}, images={len(result['images'])}, tables={len(result['tables'])}")
 
         pdf = UploadedPDF.objects.get(id=pdf_id)
         print("DEBUG: Saving extracted content to DB...")
