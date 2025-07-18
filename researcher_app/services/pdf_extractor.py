@@ -23,98 +23,149 @@ os.makedirs(TABLES_DIR, exist_ok=True)
 
 
 
-def extract_pdf(file_or_path):
+def extract_pdf(
+    file_or_path,
+    images_dir: str = "extracted_images",
+    tables_dir: str = "extracted_tables"
+) -> dict:
     """
-    Extracts text, images, and tables from a PDF file.
+    Extract text (with MuPDF/pdfplumber/OCR fallback), images, and tables from a PDF.
 
-    Supports both:
-    - file_or_path = str (path to PDF file)
-    - file_or_path = file-like object (BytesIO, UploadedFile)
+    Args:
+        file_or_path: path to PDF (str) or file-like object with .read()
+        images_dir: folder where extracted images will be saved
+        tables_dir: folder where extracted tables (CSV) will be saved
+
+    Returns:
+        {
+            "text": str,            # the full extracted & cleaned text
+            "images": [             # list of {"page": int, "path": str}
+                {"page": 1, "path": "..."},
+                ...
+            ],
+            "tables": [             # list of {"page": int, "path": str}
+                {"page": 2, "path": "..."},
+                ...
+            ]
+        }
     """
-    import traceback
-
+    # 1. Prepare source PDF on disk
     cleanup_temp = False
-
-    # ✅ Detect if file_or_path is a path or file-like object
     if isinstance(file_or_path, str):
-        pdf_source = file_or_path
-    elif hasattr(file_or_path, "read"):  # file-like object
-        try:
-            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_file:
-                tmp_file.write(file_or_path.read())
-                pdf_source = tmp_file.name
-            cleanup_temp = True
-        except Exception as e:
-            print(f"❌ Failed to create temp file: {e}")
-            traceback.print_exc()
-            raise
+        pdf_path = file_or_path
+    elif hasattr(file_or_path, "read"):
+        tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+        tmp.write(file_or_path.read())
+        tmp.close()
+        pdf_path = tmp.name
+        cleanup_temp = True
     else:
-        raise ValueError("Invalid file_or_path: expected path or file-like object")
+        raise ValueError("extract_pdf: expected file path or file-like object")
 
-    print(f"DEBUG: extract_pdf opening {pdf_source}")
+    # 2. Ensure output dirs exist
+    os.makedirs(images_dir, exist_ok=True)
+    os.makedirs(tables_dir, exist_ok=True)
+
+    text_pages = []
+    images = []
+    tables = []
 
     try:
-        # ✅ Process with fitz (PyMuPDF)
-        doc = fitz.open(pdf_source)
-        print(f"DEBUG: PDF loaded successfully with {doc.page_count} pages")
+        # Open with PyMuPDF
+        try:
+            doc = fitz.open(pdf_path)
+            page_count = doc.page_count
+            logger.debug(f"Opened PDF with {page_count} pages via PyMuPDF")
+        except Exception:
+            logger.exception("Failed to open PDF with PyMuPDF")
+            page_count = 0
 
-        # ✅ OCR Text (low DPI to save memory)
-        pages = convert_from_path(pdf_source, dpi=72)
-        pages_text = []
-        for page_num, page in enumerate(pages, 1):
-            text = pytesseract.image_to_string(page)
-            pages_text.append(text)
-            print(f"DEBUG: OCR text extracted for page {page_num}")
+        # Extract text per page
+        for i in range(page_count):
+            page_num = i + 1
+            page_text = ""
 
-        full_text = "\n\n".join(pages_text)
+            # --- 1) MuPDF text
+            try:
+                page = doc.load_page(i)
+                page_text = page.get_text().strip()
+                logger.debug(f"Page {page_num}: MuPDF extracted {len(page_text)} chars")
+            except Exception:
+                logger.exception(f"Page {page_num}: MuPDF text extraction failed")
 
-        # ✅ Clean Text
-        cleaned_text = normalize_whitespace(
-            fix_hyphenation(remove_headers_footers(pages_text))
-        )
-        print(f"DEBUG: Cleaned text length = {len(cleaned_text)}")
+            # --- 2) pdfplumber fallback
+            if not page_text:
+                try:
+                    with pdfplumber.open(pdf_path) as plumber_pdf:
+                        pl_page = plumber_pdf.pages[i]
+                        page_text = (pl_page.extract_text() or "").strip()
+                    logger.debug(f"Page {page_num}: pdfplumber extracted {len(page_text)} chars")
+                except Exception:
+                    logger.exception(f"Page {page_num}: pdfplumber extraction failed")
 
-        # ✅ Extract Images
-        images = []
-        for page_num in range(doc.page_count):
-            for img in doc[page_num].get_images(full=True):
-                xref = img[0]
-                base_image = doc.extract_image(xref)
-                image_bytes = base_image["image"]
-                image_ext = base_image["ext"]
-                image = Image.open(io.BytesIO(image_bytes))
-                img_filename = f"page{page_num+1}_img.{image_ext}"
-                img_path = os.path.join(IMAGES_DIR, img_filename)
-                image.save(img_path)
-                images.append({"page": page_num + 1, "path": img_path})
-        print(f"DEBUG: Total images extracted = {len(images)}")
+            # --- 3) OCR fallback
+            if not page_text:
+                try:
+                    pil_imgs = convert_from_path(pdf_path, dpi=150,
+                                                first_page=page_num,
+                                                last_page=page_num)
+                    ocr_text = pytesseract.image_to_string(pil_imgs[0])
+                    page_text = ocr_text.strip()
+                    logger.debug(f"Page {page_num}: OCR extracted {len(page_text)} chars")
+                except Exception:
+                    logger.exception(f"Page {page_num}: OCR extraction failed")
 
-        # ✅ Extract Tables
-        tables = []
-        with pdfplumber.open(pdf_source) as pdf:
-            for i, page in enumerate(pdf.pages):
-                for idx, table in enumerate(page.extract_tables() or []):
-                    df = pd.DataFrame(table[1:], columns=table[0])
-                    table_filename = f"table_{i+1}_{idx+1}.csv"
-                    table_path = os.path.join(TABLES_DIR, table_filename)
-                    df.to_csv(table_path, index=False)
-                    tables.append({"page": i + 1, "path": table_path})
-        print(f"DEBUG: Total tables extracted = {len(tables)}")
+            # Clean and store
+            cleaned = normalize_whitespace(
+                fix_hyphenation(remove_headers_footers(page_text))
+            )
+            text_pages.append(cleaned or f"[Page {page_num}: no text]")
 
-        return {"text": cleaned_text, "images": images, "tables": tables}
+        # 3. Extract images
+        for i in range(page_count):
+            page_num = i + 1
+            try:
+                for img_index, img in enumerate(doc[i].get_images(full=True), start=1):
+                    xref = img[0]
+                    base = doc.extract_image(xref)
+                    img_bytes = base["image"]
+                    ext = base["ext"]
+                    img_obj = Image.open(io.BytesIO(img_bytes))
+                    filename = f"page{page_num}_img{img_index}.{ext}"
+                    path = os.path.join(images_dir, filename)
+                    img_obj.save(path)
+                    images.append({"page": page_num, "path": path})
+                logger.debug(f"Page {page_num}: extracted {len(images)} total images so far")
+            except Exception:
+                logger.exception(f"Page {page_num}: image extraction failed")
 
-    except Exception as e:
-        print(f"❌ extract_pdf failed: {e}")
-        traceback.print_exc()
-        return {"text": "", "images": [], "tables": []}
+        # 4. Extract tables
+        try:
+            with pdfplumber.open(pdf_path) as plumber_pdf:
+                for i, pl_page in enumerate(plumber_pdf.pages):
+                    for tbl_idx, table in enumerate(pl_page.extract_tables() or [], start=1):
+                        df = pd.DataFrame(table[1:], columns=table[0])
+                        filename = f"table_p{i+1}_{tbl_idx}.csv"
+                        path = os.path.join(tables_dir, filename)
+                        df.to_csv(path, index=False)
+                        tables.append({"page": i + 1, "path": path})
+                logger.debug(f"Extracted {len(tables)} tables in total")
+        except Exception:
+            logger.exception("Table extraction via pdfplumber failed")
+
+        return {
+            "text": "\n\n".join(text_pages),
+            "images": images,
+            "tables": tables,
+        }
 
     finally:
-        if cleanup_temp and os.path.exists(pdf_source):
+        if cleanup_temp and os.path.exists(pdf_path):
             try:
-                os.remove(pdf_source)
-                print(f"DEBUG: Temp file {pdf_source} deleted")
-            except Exception as cleanup_err:
-                print(f"⚠️ Failed to delete temp file: {cleanup_err}")
+                os.remove(pdf_path)
+                logger.debug(f"Deleted temp PDF {pdf_path}")
+            except Exception:
+                logger.exception(f"Failed to delete temp PDF {pdf_path}")
 
 
 
