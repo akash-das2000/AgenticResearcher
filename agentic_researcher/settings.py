@@ -41,12 +41,15 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'agentic_researcher.urls'
 WSGI_APPLICATION = 'agentic_researcher.wsgi.application'
 
-# Templates (FIXED: added APP_DIRS for admin)
+# Templates (fixed to include both global and project-level templates)
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],  # Custom templates folder (optional)
-        'APP_DIRS': True,  # Enables app-level templates including admin
+        'DIRS': [
+            BASE_DIR / 'templates',  # your global templates folder (if you use one)
+            BASE_DIR / 'agentic_researcher' / 'templates',  # project-level templates
+        ],
+        'APP_DIRS': True,  # Enables app-level templates (e.g., researcher_app/templates/)
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
