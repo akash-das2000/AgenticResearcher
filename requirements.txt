@@ -9,8 +9,11 @@ dj-database-url>=2.0
 # 🌐 Production Server
 gunicorn>=20.1
 
+# 🔐 Environment Variables Support
+python-decouple>=3.8  # optional but safer than hardcoding keys
+
 # 🧠 LLM APIs
-openai
+openai>=1.0
 google-genai>=1.0.0
 
 # 📜 Markdown & PDF
@@ -25,9 +28,6 @@ pdfplumber>=0.10
 Pillow>=10.0
 pandas>=2.1
 
-# 🧹 Optional
-# python-decouple (if we later want .env file support)
-
+# 🧹 Static Files & CORS
 whitenoise>=6.6.0
-django-cors-headers
-
+django-cors-headers>=4.0
