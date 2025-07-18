@@ -1,28 +1,37 @@
-# Use a slim Python base image
-FROM python:3.10-slim
+# Base image with apt support
+FROM python:3.10-bullseye
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
 
 # Install system dependencies
-RUN apt-get update && \
-    apt-get install -y \
+RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     libtesseract-dev \
     poppler-utils \
-    libpoppler-cpp-dev \
     build-essential \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    libjpeg-dev \
+    zlib1g-dev \
+    libpng-dev \
+    libfreetype6-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+# Set work directory
 WORKDIR /app
 
-# Copy requirements and install
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies
+COPY requirements.txt /app/
+RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# Copy rest of the app
-COPY . .
+# Copy project
+COPY . /app/
 
-# Expose port
-EXPOSE 10000
+# Expose port (Render uses PORT env)
+EXPOSE 8000
 
-# Set entrypoint
-CMD ["gunicorn", "agentic_researcher.wsgi:application", "--bind", "0.0.0.0:10000", "--timeout", "600"]
+# Run collectstatic
+RUN python manage.py collectstatic --noinput
+
+# Start server
+CMD gunicorn agentic_researcher.wsgi:application --bind 0.0.0.0:$PORT
