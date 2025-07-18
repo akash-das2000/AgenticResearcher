@@ -1,6 +1,7 @@
 # researcher_app/models.py
 
 from django.db import models
+from django.conf import settings
 
 
 class UploadedPDF(models.Model):
@@ -33,11 +34,24 @@ class BlogOutline(models.Model):
     Stores generated blog outlines linked to an UploadedPDF.
     """
     pdf = models.ForeignKey(UploadedPDF, on_delete=models.CASCADE, related_name='outlines')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
+                             on_delete=models.CASCADE,
+                             help_text="Who is authoring this blog")
+    title = models.CharField(max_length=200, blank=True,
+                             help_text="Final blog title (filled in when ready)")
     outline_json = models.JSONField()
+    STATUS_CHOICES = [
+        ('drafting', 'Editing Outline'),
+        ('finalized', 'Outline Finalized'),
+    ]
+    status = models.CharField(max_length=20,
+                              choices=STATUS_CHOICES,
+                              default='drafting',
+                              help_text="Have we locked in the outline yet?")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Outline for {self.pdf.file.name}"
+        return f"Outline #{self.id} for {self.pdf.file.name} ({self.get_status_display()})"
 
 
 class BlogDraft(models.Model):
@@ -45,12 +59,19 @@ class BlogDraft(models.Model):
     Stores drafted blog sections linked to a BlogOutline.
     """
     outline = models.ForeignKey(BlogOutline, on_delete=models.CASCADE, related_name='drafts')
+    section_order = models.PositiveIntegerField(help_text="Order of this section within the outline")
     section_title = models.CharField(max_length=255)
-    content = models.TextField()
+    content = models.TextField(help_text="Current draft of the section")
+    is_final = models.BooleanField(default=False,
+                                   help_text="True once the user has ‘OK’d’ this section")
     last_updated = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        ordering = ['section_order']
+
     def __str__(self):
-        return f"Draft: {self.section_title} (Outline: {self.outline.id})"
+        status = "Final" if self.is_final else "In progress"
+        return f"[{self.section_order}] {self.section_title} ({status})"
 
 
 class ChatMessage(models.Model):
