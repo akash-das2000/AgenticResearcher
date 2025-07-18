@@ -7,7 +7,7 @@
   </div>
   <div class="upload-container">
     <div class="dropzone" id="dropzone">
-      <p>📂 Drag &amp; drop your PDF here <br> or</p>
+      <p>📂 Drag &amp; drop your PDF here<br>or</p>
       <form id="uploadForm" onsubmit="return false;">
         {% csrf_token %}
         <input type="file" id="pdfFile" name="pdf_file" accept="application/pdf" style="display:none;">
@@ -18,19 +18,27 @@
 
     <div id="uploadStatus"></div>
 
-    <!-- Parsing progress slider -->
-    <div id="parseContainer" style="display:none; margin-top:1em;">
-      <progress id="parseProgress" max="100" value="0" style="width:100%;"></progress>
-      <p id="parseMessage" style="margin:0.5em 0;">ℹ️ Parsing in progress…</p>
+    <div id="parseContainer">
+      <progress id="parseProgress" max="100" value="0"></progress>
+      <p id="parseMessage">ℹ️ Parsing in progress…</p>
     </div>
 
-    <!-- Post-upload action buttons -->
-    <div id="postUploadActions" class="post-upload-actions" style="display: none;">
+    <div id="postUploadActions" class="fade-in">
       <h3>Next Actions</h3>
-      <button id="chatBtn" class="action-btn">💬 Chat with PDF</button>
-      <button id="blogBtn" class="action-btn">📝 Make a Blog</button>
-      <button id="pptBtn" class="action-btn">📊 Make a PPT</button>
-      <button id="posterBtn" class="action-btn">🖼️ Make a Poster</button>
+      <div class="action-buttons">
+        <button id="chatBtn" class="action-btn">
+          Chat with PDF <span class="new-tab">↗</span>
+        </button>
+        <button id="blogBtn" class="action-btn">
+          Make a Blog <span class="new-tab">↗</span>
+        </button>
+        <button id="pptBtn" class="action-btn">
+          Make a PPT <span class="new-tab">↗</span>
+        </button>
+        <button id="posterBtn" class="action-btn">
+          Make a Poster <span class="new-tab">↗</span>
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -39,20 +47,18 @@
 {% block extra_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const fileInput        = document.getElementById('pdfFile');
-  const selectFileBtn    = document.getElementById('selectFileBtn');
-  const uploadBtn        = document.getElementById('uploadBtn');
-  const uploadForm       = document.getElementById('uploadForm');
-  const uploadStatus     = document.getElementById('uploadStatus');
-  const pdfViewer        = document.getElementById('pdfViewer');
-  const postUploadActions= document.getElementById('postUploadActions');
-  const parseContainer   = document.getElementById('parseContainer');
-  const parseProgress    = document.getElementById('parseProgress');
-  const parseMessage     = document.getElementById('parseMessage');
+  const fileInput         = document.getElementById('pdfFile');
+  const selectFileBtn     = document.getElementById('selectFileBtn');
+  const uploadBtn         = document.getElementById('uploadBtn');
+  const uploadForm        = document.getElementById('uploadForm');
+  const uploadStatus      = document.getElementById('uploadStatus');
+  const pdfViewer         = document.getElementById('pdfViewer');
+  const parseContainer    = document.getElementById('parseContainer');
+  const parseProgress     = document.getElementById('parseProgress');
+  const parseMessage      = document.getElementById('parseMessage');
+  const postUploadActions = document.getElementById('postUploadActions');
 
-  let selectedFile = null;
-  let uploadedPdfId;
-  let parsed = false;
+  let selectedFile, uploadedPdfId, parsed = false;
 
   // File picker
   selectFileBtn.addEventListener('click', () => fileInput.click());
@@ -77,99 +83,95 @@ document.addEventListener('DOMContentLoaded', () => {
     uploadStatus.innerHTML = `Selected: <strong>${selectedFile.name}</strong>`;
   });
 
-  // Upload & start parsing
+  // Upload & start polling
   uploadForm.addEventListener('submit', async e => {
     e.preventDefault();
     if (!selectedFile) {
       uploadStatus.innerHTML = `<span class="error">⚠️ No file selected.</span>`;
       return;
     }
-
     uploadStatus.innerHTML = "⏳ Uploading PDF…";
     uploadBtn.disabled = true;
 
-    const formData = new FormData();
-    formData.append('file', selectedFile);
+    const fd = new FormData();
+    fd.append('file', selectedFile);
 
     try {
       const res = await fetch('/api/upload/', {
         method: 'POST',
-        headers: {'X-CSRFToken': '{{ csrf_token }}'},
-        body: formData
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+        body: fd
       });
-      if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
       const data = await res.json();
 
-      if (data.id && data.url) {
-        uploadedPdfId = data.id;
-        renderPDF(data.url);
+      uploadedPdfId = data.id;
+      renderPDF(data.url);
 
-        // Show parsing UI
-        parsed = false;
-        uploadStatus.innerHTML = `<span class="success">✅ Upload successful!</span>`;
-        parseContainer.style.display = 'block';
-        parseProgress.value = 0;
-        animateProgress();
-        pollParsing();
-      } else {
-        uploadStatus.innerHTML = `<span class="error">❌ Unexpected response: ${JSON.stringify(data)}</span>`;
-      }
+      // Show progress
+      parsed = false;
+      uploadStatus.innerHTML = `<span class="success">✅ Upload successful!</span>`;
+      parseContainer.style.display = 'block';
+      parseProgress.value = 0;
+      animateProgress();
+      pollParsing();
     } catch(err) {
       console.error(err);
-      uploadStatus.innerHTML = `<span class="error">❌ Upload failed: ${err.message}</span>`;
+      uploadStatus.innerHTML = `<span class="error">❌ ${err.message}</span>`;
     } finally {
       uploadBtn.disabled = false;
     }
   });
 
-  // Progress bar animation loop
+  // Animate up to 95%
   function animateProgress() {
-    if (parsed) return parseProgress.value = 100;
-    let v = parseProgress.value + (Math.random() * 10);
-    parseProgress.value = v < 90 ? v : 10;
-    setTimeout(animateProgress, 800);
+    if (parsed) {
+      parseProgress.value = 100;
+      return;
+    }
+    parseProgress.value = Math.min(parseProgress.value + Math.random() * 10, 95);
+    setTimeout(animateProgress, 700);
   }
 
-  // Poll until GET /api/extract/:id/ returns 200
+  // Poll GET /api/extract/:id/ until we see real content
   async function pollParsing() {
     try {
       const res = await fetch(`/api/extract/${uploadedPdfId}/`, {
         method: 'GET',
-        headers: {'Accept': 'application/json'}
+        headers: { 'Accept': 'application/json' }
       });
       if (res.ok) {
         const payload = await res.json();
-        // assume parsed if "text" is non-empty or tables/images exist
-        if (payload.text?.length || payload.images?.length || payload.tables?.length) {
+        if (
+          (payload.text && payload.text.length) ||
+          (payload.images  && payload.images.length) ||
+          (payload.tables  && payload.tables.length)
+        ) {
           parsed = true;
           parseMessage.textContent = '✅ Parsing complete!';
           setTimeout(() => {
             parseContainer.style.display = 'none';
             showPostUploadActions();
-          }, 500);
+          }, 800);
           return;
         }
       }
-      // not parsed yet → retry
-      setTimeout(pollParsing, 2000);
-    } catch {
-      setTimeout(pollParsing, 2000);
-    }
+    } catch(_) {}
+    setTimeout(pollParsing, 2000);
   }
 
-  // Render PDF pages
-  function renderPDF(pdfUrl) {
+  // PDF preview
+  function renderPDF(url) {
     pdfViewer.innerHTML = '';
-    pdfjsLib.getDocument(pdfUrl).promise
+    pdfjsLib.getDocument(url).promise
       .then(pdf => {
         for (let i = 1; i <= pdf.numPages; i++) {
           pdf.getPage(i).then(page => {
-            const vp = page.getViewport({scale: 1.0});
+            const vp = page.getViewport({ scale: 1.0 });
             const cnv = document.createElement('canvas');
-            cnv.width = vp.width;
-            cnv.height = vp.height;
+            cnv.width = vp.width; cnv.height = vp.height;
             pdfViewer.appendChild(cnv);
-            page.render({canvasContext: cnv.getContext('2d'), viewport: vp});
+            page.render({ canvasContext: cnv.getContext('2d'), viewport: vp });
           });
         }
       })
@@ -179,16 +181,13 @@ document.addEventListener('DOMContentLoaded', () => {
       });
   }
 
-  // Show next-actions buttons
+  // Show final “Next Actions”
   function showPostUploadActions() {
-    uploadStatus.insertAdjacentHTML('afterend',
-      `<span class="success">✅ PDF ready to interact with!</span>`
-    );
     postUploadActions.style.display = 'block';
-    document.getElementById('chatBtn').onclick   = () => location.href = `/chat/${uploadedPdfId}/`;
-    document.getElementById('blogBtn').onclick   = () => location.href = `/blog/${uploadedPdfId}/`;
-    document.getElementById('pptBtn').onclick    = () => location.href = `/ppt/${uploadedPdfId}/`;
-    document.getElementById('posterBtn').onclick = () => location.href = `/poster/${uploadedPdfId}/`;
+    document.getElementById('chatBtn').onclick   = () => window.open(`/chat/${uploadedPdfId}/`,   '_blank');
+    document.getElementById('blogBtn').onclick   = () => window.open(`/blog/${uploadedPdfId}/`,   '_blank');
+    document.getElementById('pptBtn').onclick    = () => window.open(`/ppt/${uploadedPdfId}/`,    '_blank');
+    document.getElementById('posterBtn').onclick = () => window.open(`/poster/${uploadedPdfId}/`, '_blank');
   }
 });
 </script>
