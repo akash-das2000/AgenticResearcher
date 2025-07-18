@@ -104,13 +104,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 uploadedPdfId = data.id;
                 renderPDF(data.url);
 
+                // handle parse_status: success | pending/started | failure
                 let parseMessage = '';
-                if (data.parse_status === "success") {
+                switch (data.parse_status) {
+                  case 'success':
                     parseMessage = `<span class="success">✅ PDF parsed successfully!</span>`;
-                } else {
+                    break;
+                  case 'pending':
+                  case 'started':
+                    parseMessage = `<span class="info">ℹ️ Parsing in progress. Please check back in a moment.</span>`;
+                    break;
+                  default:
                     parseMessage = `<span class="warning">⚠️ Parsing failed. You can retry later.</span>`;
                 }
-                uploadStatus.innerHTML = `<span class="success">✅ Upload successful!</span><br>${parseMessage}`;
+
+                uploadStatus.innerHTML = `
+                  <span class="success">✅ Upload successful!</span><br>
+                  ${parseMessage}
+                `;
                 showPostUploadActions();
             } else {
                 uploadStatus.innerHTML = `<span class="error">❌ Upload error: ${JSON.stringify(data)}</span>`;
