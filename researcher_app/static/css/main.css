@@ -21,16 +21,17 @@ body {
 }
 
 /* ─── Layout ─────────────────────────────────────────────────────────────── */
+/* Now fluid: full width minus 2rem padding each side */
 .split-container {
     display: flex;
     justify-content: space-between;
-    max-width: 1200px;
-    margin: 3rem auto;
+    width: calc(100% - 4rem);
+    margin: 3rem 2rem;
     gap: 2rem;
     flex-wrap: wrap;
 }
 
-/* ← widened from flex:1 to flex:3 */
+/* PDF viewer takes 75% of that space */
 .pdf-viewer {
     flex: 3;
     background: #fff;
@@ -42,7 +43,7 @@ body {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-/* ← adjusted from flex:0.5 to flex:1 */
+/* Upload panel takes 25% */
 .upload-container {
     flex: 1;
     background-color: #fff;
@@ -52,6 +53,7 @@ body {
     padding: 2rem;
     text-align: center;
 }
+
 .placeholder-text {
     color: #6c757d;
     text-align: center;
@@ -197,6 +199,8 @@ button:disabled,
 @media (max-width: 768px) {
     .split-container {
         flex-direction: column;
+        width: auto;
+        margin: 1rem;
     }
     .pdf-viewer,
     .upload-container {
