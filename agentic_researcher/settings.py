@@ -1,24 +1,21 @@
-# agentic_researcher/settings.py
-
 import os
 from pathlib import Path
-import dj_database_url
+from django.core.management.utils import get_random_secret_key
 
 # Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production!
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'super-secret-key-for-dev')
+# Secret key: use env var or generate random for dev
+SECRET_KEY = os.getenv('SECRET_KEY', get_random_secret_key())
 
-# SECURITY WARNING: don't run with debug turned on in production!
-#DEBUG = os.getenv('DEBUG', 'True') == 'True'
-DEBUG = True
+# Debug mode: False in production, True in dev
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['*']  # Change to your Render domain in production
+# Allowed hosts
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 
 # Application definition
 INSTALLED_APPS = [
-    'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -26,14 +23,15 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'researcher_app',  # Your main app
+    'researcher_app',
+    'corsheaders',  # For CORS
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # ✅ Enable Whitenoise
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # For serving static files
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',       # For CORS
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -46,8 +44,8 @@ ROOT_URLCONF = 'agentic_researcher.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'agentic_researcher/templates'],
-        'APP_DIRS': True,  # ✅ Use app templates (researcher_app/templates)
+        'DIRS': [BASE_DIR / 'templates'],  # Add if you have templates
+        'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -61,10 +59,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'agentic_researcher.wsgi.application'
 
-# 🔥 DATABASE CONFIG: Postgres only (no SQLite fallback)
+# Database: use DATABASE_URL for Render Postgres or default sqlite3 for dev
+import dj_database_url
 DATABASES = {
-    'default': dj_database_url.parse(
-        'postgresql://agentic_researcher_db_user:jEOCYLcAJ0JlWF4e0MYuQuzxQWm3Iyr4@dpg-d1q8io7fte5s73d2i06g-a/agentic_researcher_db'
+    'default': dj_database_url.config(
+        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}'
     )
 }
 
@@ -82,20 +81,23 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
+# Static files
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Media files (for PDFs, extracted images, etc.)
+# Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Render static files with WhiteNoise
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# LLM API keys (Optional)
+# API Keys
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 
-CORS_ALLOW_ALL_ORIGINS = True  # For testing only
+# CORS settings (adjust in prod)
+CORS_ALLOW_ALL_ORIGINS = True
