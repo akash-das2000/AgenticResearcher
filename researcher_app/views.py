@@ -24,16 +24,26 @@ def parse_pdf_async(pdf_id, file_path):
     try:
         print(f"DEBUG: Starting extraction for {file_path}")
         result = pdf_extractor.extract_pdf(file_path)
-        print(f"DEBUG: Extraction result - text len={len(result['text'])}, images={len(result['images'])}, tables={len(result['tables'])}")
+
+        print(f"DEBUG: Extraction result - text len={len(result['text'])}, "
+              f"images={len(result['images'])}, tables={len(result['tables'])}")
 
         pdf = UploadedPDF.objects.get(id=pdf_id)
-        print("DEBUG: Saving extracted content to DB...")
+        print(f"DEBUG: PDF object found - {pdf}")
+
+        # ✅ Save extracted content
         ExtractedContent.objects.create(
             pdf=pdf,
             text=result['text'],
             images=result['images'],
             tables=result['tables']
         )
+        print("✅ Saved extracted content to DB")
+
+        # ✅ Optional: update parse status if you track it
+        # pdf.parse_status = 'completed'
+        # pdf.save()
+
         print(f"✅ Background parsing completed for PDF {pdf_id}")
 
     except Exception as e:
