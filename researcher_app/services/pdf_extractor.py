@@ -12,6 +12,7 @@ import os
 import tempfile
 from collections import Counter
 from django.conf import settings
+import logging
 
 # ✅ Output directories
 SAVE_DIR = os.path.join(settings.MEDIA_ROOT, "outputs")
@@ -21,7 +22,7 @@ os.makedirs(IMAGES_DIR, exist_ok=True)
 os.makedirs(TABLES_DIR, exist_ok=True)
 
 
-
+logger = logging.getLogger(__name__)
 
 def extract_pdf(
     file_or_path,
