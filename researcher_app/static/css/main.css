@@ -1,6 +1,6 @@
 /* ─── Scale Base Font ───────────────────────────────────────────────────── */
 html {
-  font-size: 108.5%; 
+  font-size: 110%; 
 }
 
 /* ─── Base Styles ───────────────────────────────────────────────────────── */
@@ -15,6 +15,9 @@ body {
 
 /* ─── Header ────────────────────────────────────────────────────────────── */
 .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
   text-align: center;
   margin-top: 0.5rem;
   padding: 0.4rem 0;
