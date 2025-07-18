@@ -10,6 +10,10 @@ from .views import (
 )
 
 urlpatterns = [
+    # Home → upload page
+    path('', upload_page, name='home'),
+
+    # Frontend pages
     path('upload/', upload_page, name='upload'),
     path('chat/<int:pk>/', chat_page, name='chat'),
     path('blog/<int:pk>/', blog_page, name='blog'),
