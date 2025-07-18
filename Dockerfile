@@ -32,6 +32,7 @@ EXPOSE 8000
 
 # Run collectstatic
 RUN python manage.py collectstatic --noinput
+RUN python manage.py migrate  # ← add this to apply migrations
 
 # Start server
 CMD gunicorn agentic_researcher.wsgi:application --bind 0.0.0.0:$PORT
