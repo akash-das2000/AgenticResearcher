@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Show progress
       parsed = false;
-      uploadStatus.innerHTML = `<span class="success">✅ Upload successful!</span>`;
+      uploadStatus.innerHTML = `<span class="success">PDF Uploaded Succesfully!</span>`;
       parseContainer.style.display = 'block';
       parseProgress.value = 0;
       animateProgress();
@@ -148,7 +148,10 @@ document.addEventListener('DOMContentLoaded', () => {
           (payload.tables  && payload.tables.length)
         ) {
           parsed = true;
-          parseMessage.textContent = '✅ Parsing complete!';
+          // 1) Update the top status
+          uploadStatus.innerHTML = `<span class="success">PDF parsed successfully!</span>`;
+          // 2) (Optional) update the parse‐bar message too
+          parseMessage.textContent = 'PDF parsed successfully!';
           setTimeout(() => {
             parseContainer.style.display = 'none';
             showPostUploadActions();
