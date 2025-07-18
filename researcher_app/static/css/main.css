@@ -1,3 +1,4 @@
+/* ─── Base Styles ────────────────────────────────────────────────────────── */
 body {
     font-family: 'Open Sans', sans-serif;
     background-color: #f8f9fa;
@@ -5,34 +6,33 @@ body {
     margin: 0;
     padding: 0;
 }
-
 .site-header {
     text-align: center;
     margin-top: 2rem;
 }
-
 .site-title {
     font-family: 'Merriweather', serif;
     font-size: 2.5rem;
     color: #003366;
 }
-
 .site-tagline {
     font-size: 1.2rem;
     color: #6c757d;
 }
 
+/* ─── Layout ─────────────────────────────────────────────────────────────── */
 .split-container {
     display: flex;
     justify-content: space-between;
     max-width: 1200px;
     margin: 3rem auto;
     gap: 2rem;
-    flex-wrap: wrap; /* ✅ Responsive for smaller screens */
+    flex-wrap: wrap;
 }
 
+/* ← widened from flex:1 to flex:3 */
 .pdf-viewer {
-    flex: 1;
+    flex: 3;
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 8px;
@@ -42,14 +42,9 @@ body {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-.placeholder-text {
-    color: #6c757d;
-    text-align: center;
-    margin-top: 40%;
-}
-
+/* ← adjusted from flex:0.5 to flex:1 */
 .upload-container {
-    flex: 0.5;
+    flex: 1;
     background-color: #fff;
     border: 1px solid #ddd;
     border-radius: 10px;
@@ -57,7 +52,11 @@ body {
     padding: 2rem;
     text-align: center;
 }
-
+.placeholder-text {
+    color: #6c757d;
+    text-align: center;
+    margin-top: 40%;
+}
 .dropzone {
     padding: 2rem;
     border: 2px dashed #6c757d;
@@ -65,15 +64,14 @@ body {
     cursor: pointer;
     transition: background-color 0.3s, transform 0.2s ease;
 }
-
 .dropzone.dragover {
     background-color: #e9ecef;
     transform: scale(1.02);
 }
 
+/* ─── Buttons ────────────────────────────────────────────────────────────── */
 button,
-.primary-btn,
-.action-btn {
+.primary-btn {
     display: inline-block;
     margin-top: 1rem;
     padding: 0.6rem 1.4rem;
@@ -85,15 +83,12 @@ button,
     cursor: pointer;
     transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
-
 button:hover,
-.primary-btn:hover,
-.action-btn:hover {
+.primary-btn:hover {
     background-color: #0055aa;
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
-
 button:disabled,
 .primary-btn:disabled {
     background-color: #cccccc;
@@ -102,14 +97,11 @@ button:disabled,
     box-shadow: none;
 }
 
-.success {
-    color: #28a745;
-}
+/* ─── Messages ───────────────────────────────────────────────────────────── */
+.success { color: #28a745; }
+.error   { color: #dc3545; }
 
-.error {
-    color: #dc3545;
-}
-
+/* ─── Footer ─────────────────────────────────────────────────────────────── */
 .site-footer {
     text-align: center;
     margin: 3rem 0 1rem 0;
@@ -117,32 +109,79 @@ button:disabled,
     color: #6c757d;
 }
 
-.post-upload-actions {
-    margin-top: 2rem;
-    padding: 1rem;
-    border-top: 1px solid #ddd;
-    text-align: center;
-    animation: fadeIn 0.6s ease forwards;
+/* ─── Progress Bar ───────────────────────────────────────────────────────── */
+#parseContainer {
+    margin: 1rem 0;
+    display: none;
+}
+#parseProgress {
+    width: 100%;
+    height: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    overflow: hidden;
+    appearance: none;
+}
+#parseProgress::-webkit-progress-bar {
+    background-color: #e9ecef;
+}
+#parseProgress::-webkit-progress-value {
+    background-color: #0055aa;
+}
+#parseProgress::-moz-progress-bar {
+    background-color: #0055aa;
+}
+#parseMessage {
+    margin: 0.5rem 0 0;
+    font-size: 0.95rem;
+    color: #555;
 }
 
-.post-upload-actions h3 {
-    margin-bottom: 1rem;
-    font-size: 1.4rem;
+/* ─── Next-Actions Button Grid ──────────────────────────────────────────── */
+#postUploadActions {
+    display: none;
+    margin-top: 2rem;
+    text-align: center;
+}
+#postUploadActions h3 {
+    margin-bottom: 0.75rem;
+    font-size: 1.5rem;
     color: #333;
 }
-
+.action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+}
 .action-btn {
-    background-color: #0066cc;
+    margin: 0;
+    padding: 0.6rem 1.2rem;
+    font-size: 1rem;
+    background-color: #003366;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    display: inline-flex;
+    align-items: center;
 }
-
 .action-btn:hover {
-    background-color: #004d99;
+    background-color: #0055aa;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+.action-btn .new-tab {
+    margin-left: 0.4rem;
+    font-size: 0.85rem;
+    line-height: 1;
 }
 
+/* ─── Misc Animations ───────────────────────────────────────────────────── */
 .fade-in {
     animation: fadeIn 0.5s ease forwards;
 }
-
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -154,14 +193,22 @@ button:disabled,
     }
 }
 
-/* ✅ Responsive adjustments */
+/* ─── Responsive Adjustments ────────────────────────────────────────────── */
 @media (max-width: 768px) {
     .split-container {
         flex-direction: column;
     }
-
     .pdf-viewer,
     .upload-container {
         width: 100%;
+    }
+}
+@media (max-width: 576px) {
+    .action-buttons {
+        flex-direction: column;
+    }
+    .action-btn {
+        width: 100%;
+        justify-content: center;
     }
 }
