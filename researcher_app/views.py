@@ -1,6 +1,5 @@
 # researcher_app/views.py
 
-# Backend
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -17,6 +16,7 @@ from .services import pdf_extractor, outline, writer, formatter
 from io import BytesIO
 import tempfile
 import threading
+from django.shortcuts import render
 
 
 def parse_pdf_async(pdf_id, file_path):
@@ -25,8 +25,10 @@ def parse_pdf_async(pdf_id, file_path):
         print(f"DEBUG: Starting extraction for {file_path}")
         result = pdf_extractor.extract_pdf(file_path)
 
-        print(f"DEBUG: Extraction result - text len={len(result['text'])}, "
-              f"images={len(result['images'])}, tables={len(result['tables'])}")
+        print(
+            f"DEBUG: Extraction result - text len={len(result['text'])}, "
+            f"images={len(result['images'])}, tables={len(result['tables'])}"
+        )
 
         pdf = UploadedPDF.objects.get(id=pdf_id)
         print(f"DEBUG: PDF object found - {pdf}")
@@ -40,16 +42,10 @@ def parse_pdf_async(pdf_id, file_path):
         )
         print("✅ Saved extracted content to DB")
 
-        # ✅ Optional: update parse status if you track it
-        # pdf.parse_status = 'completed'
-        # pdf.save()
-
         print(f"✅ Background parsing completed for PDF {pdf_id}")
 
     except Exception as e:
         print(f"❌ Background parsing failed for PDF {pdf_id}: {e}")
-
-
 
 
 class UploadPDFView(APIView):
@@ -64,14 +60,20 @@ class UploadPDFView(APIView):
 
         uploaded_file = request.FILES.get('file')
         if not uploaded_file:
-            return Response({"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "No file provided."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         serializer = UploadedPDFSerializer(data=request.data)
         if serializer.is_valid():
             pdf = serializer.save()
-
-            # ✅ Kick off parsing in background
-            threading.Thread(target=parse_pdf_async, args=(pdf.id, pdf.file.path)).start()
+            # Kick off background parse
+            threading.Thread(
+                target=parse_pdf_async,
+                args=(pdf.id, pdf.file.path),
+                daemon=True
+            ).start()
 
             return Response({
                 "id": pdf.id,
@@ -85,24 +87,38 @@ class UploadPDFView(APIView):
 
 class ExtractPDFView(APIView):
     """
-    API to extract text, images, tables from uploaded PDF.
+    GET:  return existing extracted content.
+    POST: re-run extraction and update.
     """
+
+    def get(self, request, pk, *args, **kwargs):
+        try:
+            content_obj = ExtractedContent.objects.get(pdf__pk=pk)
+        except ExtractedContent.DoesNotExist:
+            return Response(
+                {"error": "No extracted content found. Try POST to extract first."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        serializer = ExtractedContentSerializer(content_obj)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     def post(self, request, pk, *args, **kwargs):
         try:
             pdf = UploadedPDF.objects.get(pk=pk)
-            result = pdf_extractor.extract_pdf(pdf.file.path)
-            content_obj, created = ExtractedContent.objects.update_or_create(
-                pdf=pdf,
-                defaults={
-                    "text": result['text'],
-                    "images": result['images'],
-                    "tables": result['tables']
-                }
-            )
-            serializer = ExtractedContentSerializer(content_obj)
-            return Response(serializer.data, status=status.HTTP_200_OK)
         except UploadedPDF.DoesNotExist:
             return Response({"error": "PDF not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        result = pdf_extractor.extract_pdf(pdf.file.path)
+        content_obj, _ = ExtractedContent.objects.update_or_create(
+            pdf=pdf,
+            defaults={
+                "text": result['text'],
+                "images": result['images'],
+                "tables": result['tables']
+            }
+        )
+        serializer = ExtractedContentSerializer(content_obj)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class GenerateOutlineView(APIView):
@@ -120,7 +136,10 @@ class GenerateOutlineView(APIView):
             serializer = BlogOutlineSerializer(outline_obj)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except ExtractedContent.DoesNotExist:
-            return Response({"error": "Extracted content not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "Extracted content not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class DraftSectionView(APIView):
@@ -141,9 +160,15 @@ class DraftSectionView(APIView):
             serializer = BlogDraftSerializer(draft_obj)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except BlogOutline.DoesNotExist:
-            return Response({"error": "Outline not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "Outline not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
         except ExtractedContent.DoesNotExist:
-            return Response({"error": "Extracted content not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "Extracted content not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class FormatBlogView(APIView):
@@ -154,12 +179,21 @@ class FormatBlogView(APIView):
         try:
             outline = BlogOutline.objects.get(pk=pk)
             drafts = BlogDraft.objects.filter(outline=outline)
-            sections = [{"title": d.section_title, "body": d.content} for d in drafts]
+            sections = [
+                {"title": d.section_title, "body": d.content}
+                for d in drafts
+            ]
             html_content = formatter.assemble_html(sections, blog_title="My Blog")
             files = formatter.save_html_and_pdf(html_content, filename=f"blog_{pk}")
-            return Response({"html_file": files['html_path'], "pdf_file": files['pdf_path']}, status=status.HTTP_200_OK)
+            return Response({
+                "html_file": files['html_path'],
+                "pdf_file": files['pdf_path']
+            }, status=status.HTTP_200_OK)
         except BlogOutline.DoesNotExist:
-            return Response({"error": "Outline not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "Outline not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class ChatWithPDFView(APIView):
@@ -171,20 +205,28 @@ class ChatWithPDFView(APIView):
             pdf = UploadedPDF.objects.get(pk=pk)
             user_message = request.data.get('message')
 
-            # Get context: extracted content + chat history
             content = ExtractedContent.objects.get(pdf=pdf)
             chat_history = ChatMessage.objects.filter(pdf=pdf).order_by('timestamp')
-            history_text = "\n".join([f"User: {c.user_message}\nAgent: {c.agent_response}" for c in chat_history])
+            history_text = "\n".join([
+                f"User: {c.user_message}\nAgent: {c.agent_response}"
+                for c in chat_history
+            ])
 
-            # Combine context
-            context = f"Extracted Text:\n{content.text}\n\nImages:\n{content.images}\n\nTables:\n{content.tables}\n\nChat History:\n{history_text}"
+            context = (
+                f"Extracted Text:\n{content.text}\n\n"
+                f"Images:\n{content.images}\n\n"
+                f"Tables:\n{content.tables}\n\n"
+                f"Chat History:\n{history_text}"
+            )
 
-            # Call LLM
             from .services.api_handler import call_llm
-            prompt = f"""You are a helpful assistant. Answer questions about the PDF content.\n\n{context}\n\nUser: {user_message}\nAgent:"""
+            prompt = (
+                "You are a helpful assistant. Answer questions about the PDF content.\n\n"
+                f"{context}\n\n"
+                f"User: {user_message}\nAgent:"
+            )
             agent_response = call_llm(prompt, preferred="openai")
 
-            # Save chat
             chat_obj = ChatMessage.objects.create(
                 pdf=pdf,
                 user_message=user_message,
@@ -193,9 +235,15 @@ class ChatWithPDFView(APIView):
             serializer = ChatMessageSerializer(chat_obj)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except UploadedPDF.DoesNotExist:
-            return Response({"error": "PDF not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "PDF not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
         except ExtractedContent.DoesNotExist:
-            return Response({"error": "Extracted content not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "Extracted content not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class NormalizationRuleView(APIView):
@@ -215,38 +263,23 @@ class NormalizationRuleView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# Frontend
-from django.shortcuts import render
+# Frontend page renderers
 
 def upload_page(request):
-    """
-    Renders the upload page for PDFs.
-    """
     return render(request, 'upload.html')
 
+
 def chat_page(request, pk):
-    """
-    Renders the Chat with PDF page.
-    """
     return render(request, 'chat.html', {'pdf_id': pk})
 
 
 def blog_page(request, pk):
-    """
-    Renders the Blog creation page.
-    """
     return render(request, 'blog.html', {'pdf_id': pk})
 
 
 def ppt_page(request, pk):
-    """
-    Renders the PPT creation page.
-    """
     return render(request, 'ppt.html', {'pdf_id': pk})
 
 
 def poster_page(request, pk):
-    """
-    Renders the Poster creation page.
-    """
     return render(request, 'poster.html', {'pdf_id': pk})
