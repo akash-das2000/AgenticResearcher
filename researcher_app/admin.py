@@ -23,16 +23,13 @@ class ExtractedContentAdmin(admin.ModelAdmin):
 
 @admin.register(BlogOutline)
 class BlogOutlineAdmin(admin.ModelAdmin):
-    list_display = ('id', 'pdf', 'created_at')
-    search_fields = ('pdf__file',)
-    list_filter = ('created_at',)
-
+    list_display = ('id', 'pdf', 'user', 'status', 'created_at')
+    list_filter  = ('status',)
 
 @admin.register(BlogDraft)
 class BlogDraftAdmin(admin.ModelAdmin):
-    list_display = ('id', 'outline', 'section_title', 'last_updated')
-    search_fields = ('section_title', 'outline__pdf__file')
-    list_filter = ('last_updated',)
+    list_display = ('outline', 'section_order', 'section_title', 'is_final', 'last_updated')
+    list_filter  = ('is_final',)
 
 
 @admin.register(ChatMessage)
