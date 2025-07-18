@@ -41,6 +41,23 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'agentic_researcher.urls'
 WSGI_APPLICATION = 'agentic_researcher.wsgi.application'
 
+# Templates (FIXED: added APP_DIRS for admin)
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [BASE_DIR / 'templates'],  # Custom templates folder (optional)
+        'APP_DIRS': True,  # Enables app-level templates including admin
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+
 # Database (Render Postgres or fallback sqlite3)
 DATABASES = {
     'default': dj_database_url.config(
