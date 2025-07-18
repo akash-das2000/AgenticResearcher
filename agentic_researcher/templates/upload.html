@@ -2,170 +2,194 @@
 
 {% block content %}
 <div class="split-container">
-    <div class="pdf-viewer" id="pdfViewer">
-        <p class="placeholder-text">📖 PDF preview will appear here after upload.</p>
+  <div class="pdf-viewer" id="pdfViewer">
+    <p class="placeholder-text">📖 PDF preview will appear here after upload.</p>
+  </div>
+  <div class="upload-container">
+    <div class="dropzone" id="dropzone">
+      <p>📂 Drag &amp; drop your PDF here <br> or</p>
+      <form id="uploadForm" onsubmit="return false;">
+        {% csrf_token %}
+        <input type="file" id="pdfFile" name="pdf_file" accept="application/pdf" style="display:none;">
+        <button type="button" id="selectFileBtn" class="primary-btn">Choose a PDF</button>
+        <button type="submit" id="uploadBtn" class="primary-btn" disabled>Upload PDF</button>
+      </form>
     </div>
-    <div class="upload-container">
-        <div class="dropzone" id="dropzone">
-            <p>📂 Drag & drop your PDF here <br> or</p>
-            <form id="uploadForm" onsubmit="return false;">
-                {% csrf_token %}
-                <input type="file" id="pdfFile" name="pdf_file" accept="application/pdf" style="display:none;">
-                <button type="button" id="selectFileBtn" class="primary-btn">Choose a PDF</button>
-                <button type="submit" id="uploadBtn" class="primary-btn" disabled>Upload PDF</button>
-            </form>
-        </div>
-        <div id="uploadStatus"></div>
 
-        <!-- ✅ Post-upload action buttons -->
-        <div id="postUploadActions" class="post-upload-actions" style="display: none;">
-            <h3>Next Actions</h3>
-            <button id="chatBtn" class="action-btn">💬 Chat with PDF</button>
-            <button id="blogBtn" class="action-btn">📝 Make a Blog</button>
-            <button id="pptBtn" class="action-btn">📊 Make a PPT</button>
-            <button id="posterBtn" class="action-btn">🖼️ Make a Poster</button>
-        </div>
+    <div id="uploadStatus"></div>
+
+    <!-- Parsing progress slider -->
+    <div id="parseContainer" style="display:none; margin-top:1em;">
+      <progress id="parseProgress" max="100" value="0" style="width:100%;"></progress>
+      <p id="parseMessage" style="margin:0.5em 0;">ℹ️ Parsing in progress…</p>
     </div>
+
+    <!-- Post-upload action buttons -->
+    <div id="postUploadActions" class="post-upload-actions" style="display: none;">
+      <h3>Next Actions</h3>
+      <button id="chatBtn" class="action-btn">💬 Chat with PDF</button>
+      <button id="blogBtn" class="action-btn">📝 Make a Blog</button>
+      <button id="pptBtn" class="action-btn">📊 Make a PPT</button>
+      <button id="posterBtn" class="action-btn">🖼️ Make a Poster</button>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const dropzone = document.getElementById('dropzone');
-    const fileInput = document.getElementById('pdfFile');
-    const selectFileBtn = document.getElementById('selectFileBtn');
-    const uploadBtn = document.getElementById('uploadBtn');
-    const uploadForm = document.getElementById('uploadForm');
-    const uploadStatus = document.getElementById('uploadStatus');
-    const pdfViewer = document.getElementById('pdfViewer');
-    const postUploadActions = document.getElementById('postUploadActions');
-    let selectedFile = null;
-    let uploadedPdfId = null;
+document.addEventListener('DOMContentLoaded', () => {
+  const fileInput        = document.getElementById('pdfFile');
+  const selectFileBtn    = document.getElementById('selectFileBtn');
+  const uploadBtn        = document.getElementById('uploadBtn');
+  const uploadForm       = document.getElementById('uploadForm');
+  const uploadStatus     = document.getElementById('uploadStatus');
+  const pdfViewer        = document.getElementById('pdfViewer');
+  const postUploadActions= document.getElementById('postUploadActions');
+  const parseContainer   = document.getElementById('parseContainer');
+  const parseProgress    = document.getElementById('parseProgress');
+  const parseMessage     = document.getElementById('parseMessage');
 
-    // Open file picker
-    selectFileBtn.addEventListener('click', () => fileInput.click());
+  let selectedFile = null;
+  let uploadedPdfId;
+  let parsed = false;
 
-    // File selected
-    fileInput.addEventListener('change', () => {
-        if (fileInput.files.length > 0) {
-            selectedFile = fileInput.files[0];
-            uploadBtn.disabled = false;
-            uploadStatus.innerHTML = `Selected: <strong>${selectedFile.name}</strong>`;
-        }
-    });
+  // File picker
+  selectFileBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => {
+    if (!fileInput.files.length) return;
+    selectedFile = fileInput.files[0];
+    uploadBtn.disabled = false;
+    uploadStatus.innerHTML = `Selected: <strong>${selectedFile.name}</strong>`;
+  });
 
-    // Drag and drop
-    dropzone.addEventListener('dragover', e => {
-        e.preventDefault();
-        dropzone.classList.add('dragover');
-    });
-    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
-    dropzone.addEventListener('drop', e => {
-        e.preventDefault();
-        dropzone.classList.remove('dragover');
-        if (e.dataTransfer.files.length > 0) {
-            selectedFile = e.dataTransfer.files[0];
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(selectedFile);
-            fileInput.files = dataTransfer.files;
-            uploadBtn.disabled = false;
-            uploadStatus.innerHTML = `Selected: <strong>${selectedFile.name}</strong>`;
-        }
-    });
+  // Drag & drop
+  const dropzone = document.getElementById('dropzone');
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    if (!e.dataTransfer.files.length) return;
+    selectedFile = e.dataTransfer.files[0];
+    fileInput.files = e.dataTransfer.files;
+    uploadBtn.disabled = false;
+    uploadStatus.innerHTML = `Selected: <strong>${selectedFile.name}</strong>`;
+  });
 
-    // Upload PDF
-    uploadForm.addEventListener('submit', e => {
-        e.preventDefault();
-        if (!selectedFile) {
-            uploadStatus.innerHTML = `<span class="error">⚠️ No file selected.</span>`;
-            return;
-        }
-        uploadStatus.innerHTML = "⏳ Uploading and parsing PDF...";
-        uploadBtn.disabled = true;
-
-        const formData = new FormData();
-        formData.append('file', selectedFile);
-
-        fetch('/api/upload/', {
-            method: 'POST',
-            headers: {'X-CSRFToken': '{{ csrf_token }}'},
-            body: formData
-        })
-        .then(async response => {
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Server error (${response.status}): ${errorText}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.id && data.url) {
-                uploadedPdfId = data.id;
-                renderPDF(data.url);
-
-                // handle parse_status: success | pending/started | failure
-                let parseMessage = '';
-                switch (data.parse_status) {
-                  case 'success':
-                    parseMessage = `<span class="success">✅ PDF parsed successfully!</span>`;
-                    break;
-                  case 'pending':
-                  case 'started':
-                    parseMessage = `<span class="info">ℹ️ Parsing in progress. Please check back in a moment.</span>`;
-                    break;
-                  default:
-                    parseMessage = `<span class="warning">⚠️ Parsing failed. You can retry later.</span>`;
-                }
-
-                uploadStatus.innerHTML = `
-                  <span class="success">✅ Upload successful!</span><br>
-                  ${parseMessage}
-                `;
-                showPostUploadActions();
-            } else {
-                uploadStatus.innerHTML = `<span class="error">❌ Upload error: ${JSON.stringify(data)}</span>`;
-            }
-            uploadBtn.disabled = false;
-        })
-        .catch(error => {
-            console.error("Upload error:", error);
-            uploadStatus.innerHTML = `<span class="error">❌ Upload failed: ${error.message}</span>`;
-            uploadBtn.disabled = false;
-        });
-    });
-
-    // Render PDF
-    function renderPDF(pdfUrl) {
-        const loadingTask = pdfjsLib.getDocument(pdfUrl);
-        loadingTask.promise.then(pdf => {
-            pdfViewer.innerHTML = '';
-            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-                pdf.getPage(pageNum).then(page => {
-                    const viewport = page.getViewport({scale: 1.0});
-                    const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d');
-                    canvas.height = viewport.height;
-                    canvas.width = viewport.width;
-                    pdfViewer.appendChild(canvas);
-                    page.render({canvasContext: context, viewport: viewport});
-                });
-            }
-        }).catch(err => {
-            console.error("PDF render error:", err);
-            pdfViewer.innerHTML = `<span class="error">❌ Failed to load PDF: ${err.message}</span>`;
-        });
+  // Upload & start parsing
+  uploadForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!selectedFile) {
+      uploadStatus.innerHTML = `<span class="error">⚠️ No file selected.</span>`;
+      return;
     }
 
-    // Show post-upload actions
-    function showPostUploadActions() {
-        postUploadActions.style.display = 'block';
-        postUploadActions.classList.add('fade-in');
-        document.getElementById('chatBtn').onclick = () => window.location.href = `/chat/${uploadedPdfId}/`;
-        document.getElementById('blogBtn').onclick = () => window.location.href = `/blog/${uploadedPdfId}/`;
-        document.getElementById('pptBtn').onclick = () => window.location.href = `/ppt/${uploadedPdfId}/`;
-        document.getElementById('posterBtn').onclick = () => window.location.href = `/poster/${uploadedPdfId}/`;
+    uploadStatus.innerHTML = "⏳ Uploading PDF…";
+    uploadBtn.disabled = true;
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    try {
+      const res = await fetch('/api/upload/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}'},
+        body: formData
+      });
+      if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+      const data = await res.json();
+
+      if (data.id && data.url) {
+        uploadedPdfId = data.id;
+        renderPDF(data.url);
+
+        // Show parsing UI
+        parsed = false;
+        uploadStatus.innerHTML = `<span class="success">✅ Upload successful!</span>`;
+        parseContainer.style.display = 'block';
+        parseProgress.value = 0;
+        animateProgress();
+        pollParsing();
+      } else {
+        uploadStatus.innerHTML = `<span class="error">❌ Unexpected response: ${JSON.stringify(data)}</span>`;
+      }
+    } catch(err) {
+      console.error(err);
+      uploadStatus.innerHTML = `<span class="error">❌ Upload failed: ${err.message}</span>`;
+    } finally {
+      uploadBtn.disabled = false;
     }
+  });
+
+  // Progress bar animation loop
+  function animateProgress() {
+    if (parsed) return parseProgress.value = 100;
+    let v = parseProgress.value + (Math.random() * 10);
+    parseProgress.value = v < 90 ? v : 10;
+    setTimeout(animateProgress, 800);
+  }
+
+  // Poll until GET /api/extract/:id/ returns 200
+  async function pollParsing() {
+    try {
+      const res = await fetch(`/api/extract/${uploadedPdfId}/`, {
+        method: 'GET',
+        headers: {'Accept': 'application/json'}
+      });
+      if (res.ok) {
+        const payload = await res.json();
+        // assume parsed if "text" is non-empty or tables/images exist
+        if (payload.text?.length || payload.images?.length || payload.tables?.length) {
+          parsed = true;
+          parseMessage.textContent = '✅ Parsing complete!';
+          setTimeout(() => {
+            parseContainer.style.display = 'none';
+            showPostUploadActions();
+          }, 500);
+          return;
+        }
+      }
+      // not parsed yet → retry
+      setTimeout(pollParsing, 2000);
+    } catch {
+      setTimeout(pollParsing, 2000);
+    }
+  }
+
+  // Render PDF pages
+  function renderPDF(pdfUrl) {
+    pdfViewer.innerHTML = '';
+    pdfjsLib.getDocument(pdfUrl).promise
+      .then(pdf => {
+        for (let i = 1; i <= pdf.numPages; i++) {
+          pdf.getPage(i).then(page => {
+            const vp = page.getViewport({scale: 1.0});
+            const cnv = document.createElement('canvas');
+            cnv.width = vp.width;
+            cnv.height = vp.height;
+            pdfViewer.appendChild(cnv);
+            page.render({canvasContext: cnv.getContext('2d'), viewport: vp});
+          });
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        pdfViewer.innerHTML = `<span class="error">❌ Failed to load PDF</span>`;
+      });
+  }
+
+  // Show next-actions buttons
+  function showPostUploadActions() {
+    uploadStatus.insertAdjacentHTML('afterend',
+      `<span class="success">✅ PDF ready to interact with!</span>`
+    );
+    postUploadActions.style.display = 'block';
+    document.getElementById('chatBtn').onclick   = () => location.href = `/chat/${uploadedPdfId}/`;
+    document.getElementById('blogBtn').onclick   = () => location.href = `/blog/${uploadedPdfId}/`;
+    document.getElementById('pptBtn').onclick    = () => location.href = `/ppt/${uploadedPdfId}/`;
+    document.getElementById('posterBtn').onclick = () => location.href = `/poster/${uploadedPdfId}/`;
+  }
 });
 </script>
 {% endblock %}
