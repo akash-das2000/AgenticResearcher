@@ -27,12 +27,11 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 # Copy project
 COPY . /app/
 
-# Expose port (Render uses PORT env)
+# Collect static files (safe during build)
+RUN python manage.py collectstatic --noinput || echo "Collectstatic failed (expected if env vars missing)"
+
+# Expose port (Render sets $PORT)
 EXPOSE 8000
 
-# Run collectstatic
-RUN python manage.py collectstatic --noinput
-RUN python manage.py migrate  # ← add this to apply migrations
-
-# Start server
-CMD gunicorn agentic_researcher.wsgi:application --bind 0.0.0.0:$PORT
+# Start server: run migrate + start Gunicorn
+CMD bash -c "python manage.py migrate && gunicorn agentic_researcher.wsgi:application --bind 0.0.0.0:${PORT:-8000}"
