@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: agenticresearcher
+    env: docker
+    branch: main
+    dockerfilePath: Dockerfile
+    plan: free
+    healthCheckPath: /
