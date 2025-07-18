@@ -26,18 +26,16 @@ os.makedirs(TABLES_DIR, exist_ok=True)
 def extract_pdf(file_or_path):
     """
     Extracts text, images, and tables from a PDF file.
-
     Supports both:
     - file_or_path = str (path to PDF file)
     - file_or_path = file-like object (BytesIO, UploadedFile)
     """
+    cleanup_temp = False
+
     # ✅ Detect if file_or_path is a path or file-like object
     if isinstance(file_or_path, str):
-        pdf_source = file_or_path  # It's a file path
-        cleanup_temp = False
+        pdf_source = file_or_path
     elif hasattr(file_or_path, "read"):  # file-like object
-        # Save to temp file because libraries like fitz/pdfplumber need paths
-        file_or_path.seek(0)  # 🔥 Reset pointer just in case
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_file:
             tmp_file.write(file_or_path.read())
             pdf_source = tmp_file.name
@@ -45,12 +43,14 @@ def extract_pdf(file_or_path):
     else:
         raise ValueError("Invalid file_or_path: expected path or file-like object")
 
+    print(f"DEBUG: extract_pdf opening {pdf_source}")
+
     try:
-        print(f"DEBUG: extract_pdf opening {pdf_source}")
+        # ✅ Process with fitz (PyMuPDF)
         doc = fitz.open(pdf_source)
 
-        # ✅ OCR Text (low DPI to avoid memory blow-up)
-        pages = convert_from_path(pdf_source, dpi=100)
+        # ✅ OCR Text (low DPI to save memory)
+        pages = convert_from_path(pdf_source, dpi=72)
         pages_text = []
         for page in pages:
             text = pytesseract.image_to_string(page)
@@ -89,8 +89,11 @@ def extract_pdf(file_or_path):
 
         return {"text": cleaned_text, "images": images, "tables": tables}
 
+    except Exception as e:
+        print(f"❌ extract_pdf failed: {e}")
+        return {"text": "", "images": [], "tables": []}
+
     finally:
-        # ✅ Clean up temporary file if created
         if cleanup_temp and os.path.exists(pdf_source):
             os.remove(pdf_source)
 
