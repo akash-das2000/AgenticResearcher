@@ -90,6 +90,29 @@ class BlogDraft(models.Model):
         status = "Final" if self.is_final else "In progress"
         return f"[{self.section_order}] {self.section_title} ({status})"
 
+class Feedback(models.Model):
+    """
+    Records every user tweak request on an outline or section.
+    """
+    outline = models.ForeignKey(
+        BlogOutline,
+        on_delete=models.CASCADE,
+        related_name="feedbacks"
+    )
+    section_order = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Which section this feedback applies to (or null for outline)"
+    )
+    text = models.TextField(help_text="What the user asked to tweak")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        loc = f"Section {self.section_order}" if self.section_order is not None else "Outline"
+        return f"[{loc}] {self.text[:30]}…"
+
 
 class ChatMessage(models.Model):
     """
