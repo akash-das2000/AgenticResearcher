@@ -34,9 +34,6 @@ class BlogOutline(models.Model):
     Stores generated blog outlines linked to an UploadedPDF.
     """
     pdf = models.ForeignKey(UploadedPDF, on_delete=models.CASCADE, related_name='outlines')
-    user = models.ForeignKey(settings.AUTH_USER_MODEL,
-                             on_delete=models.CASCADE,
-                             help_text="Who is authoring this blog")
     title = models.CharField(max_length=200, blank=True,
                              help_text="Final blog title (filled in when ready)")
     outline_json = models.JSONField()
