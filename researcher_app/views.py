@@ -456,7 +456,7 @@ def blog_preview(request, outline_id):
     html_content = formatter.assemble_html(
         sections,
         blog_title=outline.title or "Untitled Blog",
-        author=(request.user.username if request.user.is_authenticated else "Anonymous")
+        author=outline.author_name or "Anonymous"
     )
     return HttpResponse(html_content)
 
