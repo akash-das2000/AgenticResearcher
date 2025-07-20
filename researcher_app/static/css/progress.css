@@ -12,7 +12,7 @@ body {
 
 /* ─── Sidebar + Main Container ─── */
 .blog-container {
-  flex: 1;               
+  flex: 1;
   display: flex;
   overflow: hidden;      /* only one scrollbar */
 }
@@ -45,6 +45,7 @@ body {
   flex-direction: column;
   padding: 1rem;
   min-height: 0;          /* crucial for nested scrolling */
+  margin-bottom: 3rem;    /* buffer so main area sits above fixed footer */
 }
 .step-tracker {
   display: flex;
@@ -180,7 +181,7 @@ footer {
   z-index: 1000;
 }
 
-/* ─── Buffer main content so it doesn't get hidden behind the footer ─── */
-.main-content {
-  margin-bottom: 3rem; /* roughly the height of your footer */
+/* Only hide footer on pages with <body class="no-footer"> */
+.no-footer footer {
+  display: none !important;
 }
