@@ -105,3 +105,31 @@ textarea {
   background-color: #007bff;
   color: white;
 }
+
+.main-content h2 {
+  margin-bottom: 0.2em;
+}
+.subheading {
+  margin-bottom: 1.5em;
+  color: #555;
+}
+.outline-list {
+  list-style: decimal inside;
+  margin-bottom: 2em;
+}
+.outline-item {
+  margin-bottom: 1.5em;
+}
+.outline-title {
+  font-size: 1.1em;
+  margin: 0.2em 0;
+}
+.outline-desc {
+  margin: 0.2em 0 0.8em;
+  color: #333;
+}
+.error-msg {
+  color: #c00;
+  margin-top: 1em;
+}
+
