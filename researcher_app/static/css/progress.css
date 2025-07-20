@@ -1,9 +1,22 @@
-/* ===== Container & Layout (unchanged) ===== */
+/* ===== Ensure full‐height layout ===== */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== Container & Layout ===== */
 .blog-container {
   display: flex;
+  flex: 1;                    /* fill vertical space between header & footer */
   font-family: 'Segoe UI', sans-serif;
-  min-height: 70vh;
+  overflow: hidden;           /* prevent double scrollbars */
 }
+
 .sidebar {
   width: 18%;
   background: #f4f4f4;
@@ -11,8 +24,11 @@
   border-right: 1px solid #ccc;
   overflow-y: auto;
 }
+
 .main-content {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   padding: 1.5em;
 }
 
@@ -31,34 +47,45 @@
   color: #777;
   border-bottom: 3px solid #ccc;
 }
-.step.completed { color: #28a745; border-color: #28a745; }
+.step.completed {
+  color: #28a745;
+  border-color: #28a745;
+}
 
-/* ===== Loader ===== */
+/* ===== Loader & Content Sections ===== */
+#loader-section,
+#outline-section {
+  flex: 1;                    /* grow to fill remaining space */
+  overflow-y: auto;           /* scroll if content overflows */
+}
 .spinner {
-  width: 30px; height: 30px;
+  width: 30px;
+  height: 30px;
   border: 3px solid #ccc;
   border-top-color: #007bff;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 1.5em auto;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 #loader-section p {
   margin-top: 0.5em;
   font-size: 0.9em;
 }
 
-/* ===== Outline / Draft List ===== */
-/* remove default numbering */
+/* ===== Outline / Draft List (unstyled numbers) ===== */
 .outline-list {
   list-style: none;
-  margin: 0 0 1.2em 0;
+  margin: 0 0 1.2em;
   padding: 0;
 }
 .outline-item {
   margin-bottom: 0.8em;
 }
-.outline-title, #section-title {
+.outline-title,
+#section-title {
   margin: 0 0 0.3em;
   font-size: 1em;
   font-weight: 600;
@@ -100,22 +127,28 @@ textarea {
 .button-group button:hover {
   opacity: 0.9;
 }
-
-/* primary action */
 #looks-good {
   background-color: #28a745;
   color: #fff;
 }
-
-/* secondary action */
 #feedback-form button[type="submit"] {
   background-color: #007bff;
   color: #fff;
 }
 
-/* ===== Errors ===== */
+/* ===== Error Messages ===== */
 .error-msg {
   color: #c00;
   font-size: 0.9em;
   margin-top: 0.8em;
+}
+
+/* ===== Footer pinned at bottom ===== */
+footer {
+  margin-top: auto;          /* push it down */
+  text-align: center;
+  padding: 1em 0;
+  background: #fafafa;
+  border-top: 1px solid #ddd;
+  font-size: 0.9em;
 }
