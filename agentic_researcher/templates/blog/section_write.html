@@ -1,3 +1,24 @@
+<div class="d-flex">
+  <aside style="width:25%; max-height:80vh; overflow:auto; padding-right:1rem;">
+    <h5>Feedback History</h5>
+    <ul class="list-unstyled">
+      {% for fb in feedbacks %}
+        <li class="mb-2">
+          <small class="text-muted">{{ fb.created_at|date:"M d, H:i" }}</small><br>
+          {{ fb.text|linebreaksbr }}
+        </li>
+      {% empty %}
+        <li><em>No feedback yet for this section.</em></li>
+      {% endfor %}
+    </ul>
+  </aside>
+
+  <main style="flex:1">
+    {# … your existing section editor + form … #}
+  </main>
+</div>
+
+
 {% extends "base.html" %}
 {% block content %}
   <h1>Step 2: Write Section {{ draft.section_order|add:1 }}</h1>
