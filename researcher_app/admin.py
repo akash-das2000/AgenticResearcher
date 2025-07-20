@@ -23,7 +23,7 @@ class ExtractedContentAdmin(admin.ModelAdmin):
 
 @admin.register(BlogOutline)
 class BlogOutlineAdmin(admin.ModelAdmin):
-    list_display = ('id', 'pdf', 'user', 'status', 'created_at')
+    list_display = ('id', 'pdf', 'status', 'created_at')
     list_filter  = ('status',)
 
 @admin.register(BlogDraft)
