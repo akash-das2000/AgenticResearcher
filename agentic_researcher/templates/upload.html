@@ -18,33 +18,27 @@
 
     <div id="uploadStatus"></div>
 
-    <div id="parseContainer">
+    <div id="parseContainer" style="display:none;">
       <progress id="parseProgress" max="100" value="0"></progress>
       <p id="parseMessage">ℹ️ Parsing in progress…</p>
     </div>
 
-    <div id="postUploadActions" class="fade-in">
+    <div id="postUploadActions" class="fade-in" style="display:none;">
       <h3>Next Actions</h3>
       <div class="action-buttons">
-        <button id="chatBtn" class="action-btn">
-          Chat with PDF <span class="new-tab">↗</span>
-        </button>
-        <button id="blogBtn" class="action-btn">
-          Make a Blog <span class="new-tab">↗</span>
-        </button>
-        <button id="pptBtn" class="action-btn">
-          Make a PPT <span class="new-tab">↗</span>
-        </button>
-        <button id="posterBtn" class="action-btn">
-          Make a Poster <span class="new-tab">↗</span>
-        </button>
+        <a id="chatLink"   class="action-btn" target="_blank" rel="noopener">Chat with PDF <span class="new-tab">↗</span></a>
+        <a id="blogLink"   class="action-btn" target="_blank" rel="noopener">Make a Blog <span class="new-tab">↗</span></a>
+        <a id="pptLink"    class="action-btn" target="_blank" rel="noopener">Make a PPT <span class="new-tab">↗</span></a>
+        <a id="posterLink" class="action-btn" target="_blank" rel="noopener">Make a Poster <span class="new-tab">↗</span></a>
       </div>
     </div>
   </div>
 </div>
 {% endblock %}
 
+
 {% block extra_scripts %}
+<script src="https://mozilla.github.io/pdf.js/build/pdf.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   const fileInput         = document.getElementById('pdfFile');
@@ -83,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
     uploadStatus.innerHTML = `Selected: <strong>${selectedFile.name}</strong>`;
   });
 
-  // Upload & start polling
+  // Upload & start parsing
   uploadForm.addEventListener('submit', async e => {
     e.preventDefault();
     if (!selectedFile) {
@@ -108,9 +102,8 @@ document.addEventListener('DOMContentLoaded', () => {
       uploadedPdfId = data.id;
       renderPDF(data.url);
 
-      // Show progress
       parsed = false;
-      uploadStatus.innerHTML = `<span class="success">PDF Uploaded Succesfully!</span>`;
+      uploadStatus.innerHTML = `<span class="success">PDF Uploaded Successfully!</span>`;
       parseContainer.style.display = 'block';
       parseProgress.value = 0;
       animateProgress();
@@ -123,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Animate up to 95%
+  // Animate progress bar up to 95%
   function animateProgress() {
     if (parsed) {
       parseProgress.value = 100;
@@ -133,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(animateProgress, 700);
   }
 
-  // Poll GET /api/extract/:id/ until we see real content
+  // Poll parsing endpoint until content appears
   async function pollParsing() {
     try {
       const res = await fetch(`/api/extract/${uploadedPdfId}/`, {
@@ -144,13 +137,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const payload = await res.json();
         if (
           (payload.text && payload.text.length) ||
-          (payload.images  && payload.images.length) ||
-          (payload.tables  && payload.tables.length)
+          (payload.images && payload.images.length) ||
+          (payload.tables && payload.tables.length)
         ) {
           parsed = true;
-          // 1) Update the top status
           uploadStatus.innerHTML = `<span class="success">PDF parsed successfully!</span>`;
-          // 2) (Optional) update the parse‐bar message too
           parseMessage.textContent = 'PDF parsed successfully!';
           setTimeout(() => {
             parseContainer.style.display = 'none';
@@ -163,39 +154,34 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(pollParsing, 2000);
   }
 
-  // PDF preview
+  // Render PDF preview into canvas elements
   function renderPDF(url) {
     pdfViewer.innerHTML = '';
     pdfjsLib.getDocument(url).promise.then(pdf => {
       for (let i = 1; i <= pdf.numPages; i++) {
         pdf.getPage(i).then(page => {
-          // calculate scale to fill container width
           const containerWidth = pdfViewer.clientWidth;
-          const viewport0     = page.getViewport({ scale: 1 });
-          const scale         = containerWidth / viewport0.width;
-          const viewport      = page.getViewport({ scale });
-  
-          const cnv = document.createElement('canvas');
-          cnv.width  = viewport.width;
-          cnv.height = viewport.height;
-          pdfViewer.appendChild(cnv);
-          page.render({
-            canvasContext: cnv.getContext('2d'),
-            viewport
-          });
+          const viewport0 = page.getViewport({ scale: 1 });
+          const scale     = containerWidth / viewport0.width;
+          const viewport  = page.getViewport({ scale });
+
+          const canvas = document.createElement('canvas');
+          canvas.width  = viewport.width;
+          canvas.height = viewport.height;
+          pdfViewer.appendChild(canvas);
+          page.render({ canvasContext: canvas.getContext('2d'), viewport });
         });
       }
     });
   }
 
-
-  // Show final “Next Actions”
+  // Show action links with correct hrefs
   function showPostUploadActions() {
     postUploadActions.style.display = 'block';
-    document.getElementById('chatBtn').onclick   = () => window.open(`/chat/${uploadedPdfId}/`,   '_blank');
-    document.getElementById('blogBtn').onclick   = () => window.open(`/blog/new/${uploadedPdfId}/`, '_blank');
-    document.getElementById('pptBtn').onclick    = () => window.open(`/ppt/${uploadedPdfId}/`,    '_blank');
-    document.getElementById('posterBtn').onclick = () => window.open(`/poster/${uploadedPdfId}/`, '_blank');
+    document.getElementById('chatLink').href   = `/chat/${uploadedPdfId}/`;
+    document.getElementById('blogLink').href   = `/blog/new/${uploadedPdfId}/`;
+    document.getElementById('pptLink').href    = `/ppt/${uploadedPdfId}/`;
+    document.getElementById('posterLink').href = `/poster/${uploadedPdfId}/`;
   }
 });
 </script>
