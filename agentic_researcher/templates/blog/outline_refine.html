@@ -1,4 +1,7 @@
+{% extends "base.html" %}
+{% block content %}
 <div class="d-flex">
+  <!-- Sidebar: feedback history -->
   <aside style="width:25%; max-height:80vh; overflow:auto; padding-right:1rem;">
     <h5>Feedback History</h5>
     <ul class="list-unstyled">
@@ -13,36 +16,44 @@
     </ul>
   </aside>
 
+  <!-- Main area: outline + form -->
   <main style="flex:1">
-    {# … your existing outline + form markup here … #}
+    <h1>Step 1: Refine Your Blog Outline</h1>
+
+    <h3>Current Outline</h3>
+    <ol>
+      {% for sec in sections %}
+        <li>
+          <strong>{{ sec.title }}</strong><br>
+          {{ sec.description }}
+        </li>
+      {% endfor %}
+    </ol>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="feedback">What would you like tweaked?</label><br>
+        <textarea
+          name="feedback"
+          id="feedback"
+          rows="4"
+          class="form-control"
+          placeholder="Describe your edits here…"
+        >{{ request.POST.feedback }}</textarea>
+      </div>
+      <button
+        type="submit"
+        name="feedback"
+        value="OK"
+        class="btn btn-primary mt-2"
+      >
+        Looks Good
+      </button>
+      <button type="submit" class="btn btn-secondary mt-2">
+        Apply Feedback
+      </button>
+    </form>
   </main>
 </div>
-
-{% extends "base.html" %}
-{% block content %}
-  <h1>Step 1: Refine Your Blog Outline</h1>
-
-  <h3>Current Outline</h3>
-  <ol>
-    {% for sec in outline.sections %}
-      <li>
-        <strong>{{ sec.title }}</strong><br>
-        {{ sec.description }}
-      </li>
-    {% endfor %}
-  </ol>
-
-  <form method="post">
-    {% csrf_token %}
-    <div>
-      <label for="feedback">What would you like tweaked?</label><br>
-      <textarea name="feedback" id="feedback" rows="4" class="form-control"></textarea>
-    </div>
-    <button type="submit" name="feedback" value="OK" class="btn btn-primary mt-2">
-      Looks Good
-    </button>
-    <button type="submit" class="btn btn-secondary mt-2">
-      Apply Feedback
-    </button>
-  </form>
 {% endblock %}
