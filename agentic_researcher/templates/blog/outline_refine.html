@@ -127,7 +127,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // on Looks Good → go to draft
   looksGood.addEventListener("click", () => {
-    window.location.href = `{% url 'section_write' outline_id=outline.id %}`;
+    window.location.href = "{% url 'section_write' outline_id=outline.id %}";
   });
 });
 </script>
