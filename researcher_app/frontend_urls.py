@@ -28,6 +28,7 @@ urlpatterns = [
     path('blog/section/<int:outline_id>/', section_write, name='section_write'),
     # 4) Finish, preview & download
     path('blog/finish/<int:outline_id>/', blog_finish, name='blog_finish'),
+    path('blog/preview/<int:outline_id>/',views.blog_preview,name='blog_preview'),
 
     # ——— Existing “view a blog” page ———
     # (you probably want this to render the final HTML/PDF)
