@@ -16,7 +16,7 @@ from .services import pdf_extractor, outline, writer, formatter
 from io import BytesIO
 import tempfile
 import threading
-from django.shortcuts import render
+from django.shortcuts import render, redirect, get_object_or_404
 
 
 def parse_pdf_async(pdf_id, file_path):
