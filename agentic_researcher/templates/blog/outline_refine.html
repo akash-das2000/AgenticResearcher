@@ -66,17 +66,18 @@ document.addEventListener("DOMContentLoaded", () => {
     return res.json();
   })
   .then(data => {
+    // Hide loader, show outline
     loader.style.display  = "none";
     section.style.display = "block";
 
-    // Build a clean list of sections
+    // Build a clean list of sections (let <ol> number them)
     const sections = data.outline_json.sections || [];
-    sections.forEach((sec, i) => {
+    sections.forEach(sec => {
       const item = document.createElement("li");
       item.classList.add("outline-item");
 
       const title = document.createElement("h3");
-      title.textContent = `${i+1}. ${sec.title}`;
+      title.textContent = sec.title;
       title.classList.add("outline-title");
 
       const desc = document.createElement("p");
