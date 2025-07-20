@@ -15,7 +15,7 @@
 
   <!-- Main Content -->
   <main class="main-content">
-    <!-- Phase Tracker (4 steps) -->
+    <!-- Phase Tracker -->
     <div class="step-tracker">
       <div class="step completed">1. Outline</div>
       <div class="step">2. Draft</div>
@@ -40,6 +40,7 @@
         <label for="feedback">Any adjustments or notes?</label>
         <textarea id="feedback" rows="3" placeholder="e.g. “Combine sections 2 and 3”"></textarea>
         <div class="button-group">
+          <!-- This button will *not* submit the form -->
           <button type="button" id="looks-good">Looks Good, Next</button>
           <button type="submit">Apply Feedback</button>
         </div>
@@ -52,7 +53,7 @@
 {% block extra_scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const outlineId = "{{ outline.id }}";
+  const outlineId = "{{ outline_id }}";          // use outline_id directly
   const loader    = document.getElementById("loader-section");
   const loaderText= document.getElementById("loader-text");
   const section   = document.getElementById("outline-section");
@@ -62,7 +63,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const textarea  = document.getElementById("feedback");
   const looksGood = document.getElementById("looks-good");
 
-  // Fetch & render outline (initial or on feedback)
+  // Fetch / render outline (initial or after feedback)
   async function fetchOutline(feedback=null) {
     loader.style.display  = "block";
     section.style.display = "none";
@@ -81,7 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!resp.ok) throw new Error(resp.status);
     const data = await resp.json();
 
-    // render list
+    // Render the items
     list.innerHTML = "";
     (data.outline_json.sections || []).forEach(sec => {
       const li = document.createElement("li");
@@ -96,7 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loader.style.display  = "none";
     section.style.display = "block";
 
-    // sidebar entry
+    // Append a sidebar entry
     const entry = document.createElement("li");
     entry.textContent = feedback
       ? `✔ Applied feedback: "${feedback}"`
@@ -104,13 +105,13 @@ document.addEventListener("DOMContentLoaded", () => {
     history.appendChild(entry);
   }
 
-  // initial load
+  // Initial load
   fetchOutline().catch(err => {
     console.error(err);
     loader.innerHTML += `<p class="error-msg">❌ Something went wrong.</p>`;
   });
 
-  // apply feedback
+  // Apply Feedback flow
   form.addEventListener("submit", async e => {
     e.preventDefault();
     const fb = textarea.value.trim();
@@ -125,9 +126,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // on Looks Good → go to draft
-  looksGood.addEventListener("click", () => {
-    window.location.href = "{% url 'section_write' outline_id=outline.id %}";
+  // SAFE “Looks Good, Next” navigation
+  looksGood.addEventListener("click", e => {
+    e.preventDefault();    // prevent any default
+    // Redirect to the Draft page (Step 2)
+    window.location.href = "{% url 'section_write' outline_id=outline_id %}";
   });
 });
 </script>
