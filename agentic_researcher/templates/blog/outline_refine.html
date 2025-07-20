@@ -15,7 +15,7 @@
 
   <!-- Main Content -->
   <main class="main-content">
-    <!-- Phase Tracker -->
+    <!-- Phase Tracker (4 steps) -->
     <div class="step-tracker">
       <div class="step completed">1. Outline</div>
       <div class="step">2. Draft</div>
@@ -38,7 +38,7 @@
       <form id="feedback-form">
         {% csrf_token %}
         <label for="feedback">Any adjustments or notes?</label>
-        <textarea name="feedback" id="feedback" rows="3" placeholder="e.g. “Combine sections 2 and 3”"></textarea>
+        <textarea id="feedback" rows="3" placeholder="e.g. “Combine sections 2 and 3”"></textarea>
         <div class="button-group">
           <button type="button" id="looks-good">Looks Good, Next</button>
           <button type="submit">Apply Feedback</button>
@@ -62,16 +62,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const textarea  = document.getElementById("feedback");
   const looksGood = document.getElementById("looks-good");
 
-  // Utility to call the API (with optional feedback) and render results
+  // Fetch & render outline (initial or on feedback)
   async function fetchOutline(feedback=null) {
-    // Show loader
-    section.style.display = "none";
     loader.style.display  = "block";
+    section.style.display = "none";
     loaderText.textContent = feedback
       ? "Refining your outline…"
       : "Generating your outline…";
 
-    // Call API
     const resp = await fetch(`/api/outline/${outlineId}/`, {
       method: 'POST',
       headers: {
@@ -80,14 +78,12 @@ document.addEventListener("DOMContentLoaded", () => {
       },
       body: feedback ? JSON.stringify({ feedback }) : null
     });
-    if (!resp.ok) throw new Error(`Status ${resp.status}`);
+    if (!resp.ok) throw new Error(resp.status);
     const data = await resp.json();
 
-    // Render
-    loader.style.display = "none";
-    list.innerHTML = "";  // clear old
-    const secs = data.outline_json.sections || [];
-    secs.forEach(sec => {
+    // render list
+    list.innerHTML = "";
+    (data.outline_json.sections || []).forEach(sec => {
       const li = document.createElement("li");
       li.className = "outline-item";
       li.innerHTML = `
@@ -96,9 +92,11 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
       list.appendChild(li);
     });
+
+    loader.style.display  = "none";
     section.style.display = "block";
 
-    // Sidebar entry
+    // sidebar entry
     const entry = document.createElement("li");
     entry.textContent = feedback
       ? `✔ Applied feedback: "${feedback}"`
@@ -106,13 +104,13 @@ document.addEventListener("DOMContentLoaded", () => {
     history.appendChild(entry);
   }
 
-  // Initial generate on load
+  // initial load
   fetchOutline().catch(err => {
     console.error(err);
-    loader.innerHTML += `<p class="error-msg">❌ Failed. Try again?</p>`;
+    loader.innerHTML += `<p class="error-msg">❌ Something went wrong.</p>`;
   });
 
-  // Handle “Apply Feedback”
+  // apply feedback
   form.addEventListener("submit", async e => {
     e.preventDefault();
     const fb = textarea.value.trim();
@@ -123,11 +121,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }));
     await fetchOutline(fb).catch(err => {
       console.error(err);
-      loader.innerHTML += `<p class="error-msg">❌ Retry applying feedback.</p>`;
+      loader.innerHTML += `<p class="error-msg">❌ Retry feedback.</p>`;
     });
   });
 
-  // “Looks Good” → move on
+  // on Looks Good → go to draft
   looksGood.addEventListener("click", () => {
     window.location.href = `{% url 'section_write' outline_id=outline.id %}`;
   });
