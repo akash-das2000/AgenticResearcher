@@ -1,4 +1,4 @@
-/* ===== Ensure full‐height layout ===== */
+/* ===== Full‐height Flex Layout ===== */
 html, body {
   height: 100%;
   margin: 0;
@@ -14,7 +14,7 @@ body {
   display: flex;
   flex: 1;                    /* fill vertical space between header & footer */
   font-family: 'Segoe UI', sans-serif;
-  overflow: hidden;           /* prevent double scrollbars */
+  overflow: hidden;           /* one scrollbar only */
 }
 
 .sidebar {
@@ -30,6 +30,7 @@ body {
   display: flex;
   flex-direction: column;
   padding: 1.5em;
+  min-height: 0;              /* allow children to shrink and scroll */
 }
 
 /* ===== Phase Tracker ===== */
@@ -55,7 +56,7 @@ body {
 /* ===== Loader & Content Sections ===== */
 #loader-section,
 #outline-section {
-  flex: 1;                    /* grow to fill remaining space */
+  flex: 1;                    /* fill remaining space under tracker */
   overflow-y: auto;           /* scroll if content overflows */
 }
 .spinner {
@@ -75,7 +76,7 @@ body {
   font-size: 0.9em;
 }
 
-/* ===== Outline / Draft List (unstyled numbers) ===== */
+/* ===== Outline / Draft List (unstyled) ===== */
 .outline-list {
   list-style: none;
   margin: 0 0 1.2em;
@@ -127,13 +128,15 @@ textarea {
 .button-group button:hover {
   opacity: 0.9;
 }
+
 #looks-good {
   background-color: #28a745;
-  color: #fff;
+  color: white;
 }
+
 #feedback-form button[type="submit"] {
   background-color: #007bff;
-  color: #fff;
+  color: white;
 }
 
 /* ===== Error Messages ===== */
@@ -145,7 +148,7 @@ textarea {
 
 /* ===== Footer pinned at bottom ===== */
 footer {
-  margin-top: auto;          /* push it down */
+  margin-top: auto;           /* push to bottom */
   text-align: center;
   padding: 1em 0;
   background: #fafafa;
