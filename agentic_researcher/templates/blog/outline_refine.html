@@ -178,9 +178,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const list      = document.getElementById("outline-content");
   const history   = document.getElementById("feedback-history");
   const form      = document.getElementById("feedback-form");
+  const textarea  = document.getElementById("feedback");
+  const looksGood = document.getElementById("looks-good");
 
-  // Load / refine outline via your API
-  async function fetchOutline(feedbackText=null) {
+  async function fetchOutline(feedbackText = null) {
     loader.style.display  = "flex";
     section.style.display = "none";
     loaderText.textContent = feedbackText
@@ -200,7 +201,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!resp.ok) throw new Error(resp.statusText);
     const data = await resp.json();
 
-    // Render outline
     list.innerHTML = "";
     (data.outline_json.sections || []).forEach(sec => {
       const li = document.createElement("li");
@@ -224,35 +224,34 @@ document.addEventListener("DOMContentLoaded", () => {
     history.appendChild(entry);
   }
 
-  // On page load, generate outline
+  // initial load
   fetchOutline().catch(err => {
     loader.innerHTML = `<p style="color:#c00;">❌ Something went wrong.</p>`;
     console.error(err);
   });
 
-  // Handle both buttons via the same form submit
+  // single submit listener handles both buttons:
   form.addEventListener("submit", async e => {
-    e.preventDefault();
-    const fb = e.submitter.value === "OK"
-      ? "OK"
-      : document.getElementById("feedback").value.trim();
-    document.getElementById("feedback").value = "";
-    if (!fb) return;
-    if (fb === "OK") {
-      // let the server handle redirect for "Looks Good"
-      form.removeEventListener("submit", arguments.callee);
-      form.submit();
-    } else {
-      // refine in place
-      const note = document.createElement("li");
-      note.textContent = `✏️ Feedback: ${fb}`;
-      history.appendChild(note);
-      await fetchOutline(fb).catch(err => {
-        console.error(err);
-        loader.innerHTML += `<p style="color:#c00;">❌ Retry feedback.</p>`;
-      });
+    // 1) If "Looks Good, Next" was clicked, let the form submit normally:
+    if (e.submitter && e.submitter.id === "looks-good") {
+      // do nothing here → default POST to /blog/outline/<id>/ with feedback=OK
+      return;
     }
+
+    // 2) Otherwise, it's "Apply Feedback": intercept, refine in-place
+    e.preventDefault();
+    const fb = textarea.value.trim();
+    if (!fb) return;
+    textarea.value = "";
+    const note = document.createElement("li");
+    note.textContent = `✏️ Feedback: ${fb}`;
+    history.appendChild(note);
+    await fetchOutline(fb).catch(err => {
+      console.error(err);
+      loader.innerHTML += `<p style="color:#c00;">❌ Retry feedback.</p>`;
+    });
   });
 });
 </script>
 {% endblock %}
+
