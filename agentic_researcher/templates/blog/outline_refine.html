@@ -26,7 +26,7 @@
     <!-- Loader -->
     <div id="loader-section">
       <div class="spinner"></div>
-      <p>Generating your outline. Please wait…</p>
+      <p id="loader-text">Generating your outline. Please wait…</p>
     </div>
 
     <!-- Outline Display -->
@@ -35,7 +35,7 @@
       <p class="subheading">Review the structure below and let me know any tweaks.</p>
       <ol id="outline-content" class="outline-list"></ol>
 
-      <form method="post" id="feedback-form">
+      <form id="feedback-form">
         {% csrf_token %}
         <label for="feedback">Any adjustments or notes?</label>
         <textarea name="feedback" id="feedback" rows="3" placeholder="e.g. “Combine sections 2 and 3”"></textarea>
@@ -47,72 +47,88 @@
     </section>
   </main>
 </div>
+{% endblock %}
 
+{% block extra_scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const outlineId = "{{ outline.id }}";
   const loader    = document.getElementById("loader-section");
+  const loaderText= document.getElementById("loader-text");
   const section   = document.getElementById("outline-section");
   const list      = document.getElementById("outline-content");
   const history   = document.getElementById("feedback-history");
+  const form      = document.getElementById("feedback-form");
+  const textarea  = document.getElementById("feedback");
+  const looksGood = document.getElementById("looks-good");
 
-  // Kick off the outline-generation API
-  fetch(`/api/outline/${outlineId}/`, {
-    method: 'POST',
-    headers: { 'X-CSRFToken': '{{ csrf_token }}' }
-  })
-  .then(res => {
-    if (!res.ok) throw new Error(res.status);
-    return res.json();
-  })
-  .then(data => {
-    // Hide loader, show outline
-    loader.style.display  = "none";
+  // Utility to call the API (with optional feedback) and render results
+  async function fetchOutline(feedback=null) {
+    // Show loader
+    section.style.display = "none";
+    loader.style.display  = "block";
+    loaderText.textContent = feedback
+      ? "Refining your outline…"
+      : "Generating your outline…";
+
+    // Call API
+    const resp = await fetch(`/api/outline/${outlineId}/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}',
+        'Content-Type': 'application/json'
+      },
+      body: feedback ? JSON.stringify({ feedback }) : null
+    });
+    if (!resp.ok) throw new Error(`Status ${resp.status}`);
+    const data = await resp.json();
+
+    // Render
+    loader.style.display = "none";
+    list.innerHTML = "";  // clear old
+    const secs = data.outline_json.sections || [];
+    secs.forEach(sec => {
+      const li = document.createElement("li");
+      li.className = "outline-item";
+      li.innerHTML = `
+        <h3 class="outline-title">${sec.title}</h3>
+        <p class="outline-desc">${sec.description}</p>
+      `;
+      list.appendChild(li);
+    });
     section.style.display = "block";
 
-    // Build a clean list of sections (let <ol> number them)
-    const sections = data.outline_json.sections || [];
-    sections.forEach(sec => {
-      const item = document.createElement("li");
-      item.classList.add("outline-item");
+    // Sidebar entry
+    const entry = document.createElement("li");
+    entry.textContent = feedback
+      ? `✔ Applied feedback: "${feedback}"`
+      : "✔ Outline ready for review.";
+    history.appendChild(entry);
+  }
 
-      const title = document.createElement("h3");
-      title.textContent = sec.title;
-      title.classList.add("outline-title");
-
-      const desc = document.createElement("p");
-      desc.textContent = sec.description;
-      desc.classList.add("outline-desc");
-
-      item.appendChild(title);
-      item.appendChild(desc);
-      list.appendChild(item);
-    });
-
-    // Record in sidebar
-    const ok = document.createElement("li");
-    ok.textContent = "✔ Outline ready for review.";
-    history.appendChild(ok);
-  })
-  .catch(err => {
+  // Initial generate on load
+  fetchOutline().catch(err => {
     console.error(err);
-    loader.querySelector(".spinner").style.display = "none";
-    loader.innerHTML += `<p class="error-msg">❌ Failed to generate outline. Please try again later.</p>`;
+    loader.innerHTML += `<p class="error-msg">❌ Failed. Try again?</p>`;
   });
 
-  // Feedback form
-  document.getElementById("feedback-form").addEventListener("submit", e => {
+  // Handle “Apply Feedback”
+  form.addEventListener("submit", async e => {
     e.preventDefault();
-    const txt = document.getElementById("feedback").value.trim();
-    if (!txt) return;
-    const li = document.createElement("li");
-    li.textContent = `✏️ Feedback: ${txt}`;
-    history.appendChild(li);
-    document.getElementById("feedback").value = '';
+    const fb = textarea.value.trim();
+    if (!fb) return;
+    textarea.value = "";
+    history.appendChild(Object.assign(document.createElement("li"), {
+      textContent: `✏️ Feedback: ${fb}`
+    }));
+    await fetchOutline(fb).catch(err => {
+      console.error(err);
+      loader.innerHTML += `<p class="error-msg">❌ Retry applying feedback.</p>`;
+    });
   });
 
-  // “Looks Good” button → Draft step
-  document.getElementById("looks-good").addEventListener("click", () => {
+  // “Looks Good” → move on
+  looksGood.addEventListener("click", () => {
     window.location.href = `{% url 'section_write' outline_id=outline.id %}`;
   });
 });
