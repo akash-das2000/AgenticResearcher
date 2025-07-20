@@ -1,4 +1,4 @@
-/* ===== Full‐height Flex Layout ===== */
+/* ─── Full-Height Flex Layout ─── */
 html, body {
   height: 100%;
   margin: 0;
@@ -9,41 +9,54 @@ body {
   flex-direction: column;
 }
 
-/* ===== Container & Layout ===== */
+/* ─── Container & Sidebar ─── */
 .blog-container {
+  flex: 1;                   /* fill between header & footer */
   display: flex;
-  flex: 1;                    /* fill vertical space between header & footer */
+  overflow: hidden;          /* single scrollbar */
   font-family: 'Segoe UI', sans-serif;
-  overflow: hidden;           /* one scrollbar only */
 }
-
 .sidebar {
-  width: 18%;
+  width: 20%;
   background: #f4f4f4;
-  padding: 0.8em;
+  padding: 1rem;
   border-right: 1px solid #ccc;
   overflow-y: auto;
 }
+.sidebar h3 {
+  margin-top: 0;
+  font-size: 1rem;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 0.5rem;
+}
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+.sidebar li {
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
 
+/* ─── Main Content & Tracker ─── */
 .main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 1.5em;
-  min-height: 0;              /* allow children to shrink and scroll */
+  padding: 1rem;
+  min-height: 0;             /* allow internal scroll */
 }
-
-/* ===== Phase Tracker ===== */
 .step-tracker {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 1em;
+  margin-bottom: 1rem;
+  flex: none;
 }
 .step {
   flex: 1;
   text-align: center;
-  padding: 0.3em;
-  font-size: 0.9em;
+  padding: 0.4rem;
+  font-size: 0.9rem;
   font-weight: bold;
   color: #777;
   border-bottom: 3px solid #ccc;
@@ -53,128 +66,110 @@ body {
   border-color: #28a745;
 }
 
-/* ===== Loader & Content Sections ===== */
+/* ─── Loader & Outline / Draft Sections ─── */
 #loader-section,
 #outline-section {
-  flex: 1;                    /* fill remaining space under tracker */
-  overflow-y: auto;           /* scroll if content overflows */
+  flex: 1;                   /* fill remaining space */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;   /* center spinner / initial text */
+  align-items: center;
+  overflow-y: auto;          /* scroll when outline is long */
+  padding: 1rem;
+  min-height: 0;
 }
 .spinner {
-  width: 30px;
-  height: 30px;
+  width: 2rem;
+  height: 2rem;
   border: 3px solid #ccc;
   border-top-color: #007bff;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin: 1.5em auto;
 }
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 #loader-section p {
-  margin-top: 0.5em;
-  font-size: 0.9em;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
 }
 
-/* ===== Outline / Draft List (unstyled) ===== */
+/* ─── Outline / Draft List Styling ─── */
 .outline-list {
   list-style: none;
-  margin: 0 0 1.2em;
   padding: 0;
+  margin: 0 0 1rem;
+  width: 100%;
 }
 .outline-item {
-  margin-bottom: 0.8em;
+  margin-bottom: 1rem;
 }
 .outline-title,
 #section-title {
-  margin: 0 0 0.3em;
-  font-size: 1em;
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
   font-weight: 600;
   line-height: 1.3;
 }
 .outline-desc {
-  margin: 0 0 0.6em;
-  font-size: 0.95em;
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
   line-height: 1.4;
 }
 
-/* ===== Feedback Form ===== */
+/* ─── Feedback Form ─── */
 .subheading {
-  margin-bottom: 0.8em;
+  margin-bottom: 0.5rem;
   color: #555;
-  font-size: 0.95em;
+  font-size: 0.9rem;
 }
 textarea {
   width: 100%;
-  padding: 0.5em;
-  font-size: 0.95em;
+  padding: 0.5rem;
+  font-size: 0.9rem;
   border: 1px solid #ccc;
-  border-radius: 5px;
-  margin-bottom: 0.8em;
+  border-radius: 4px;
+  margin-bottom: 0.8rem;
+  resize: vertical;
 }
 .button-group {
-  margin-top: 0.8em;
+  display: flex;
+  gap: 0.5rem;
 }
 .button-group button {
-  padding: 0.6em 1.4em;
-  font-size: 1em;
-  margin-right: 0.5em;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.9rem;
+  font-weight: 600;
   border: none;
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  transition: opacity 0.2s;
+  transition: opacity 0.2s, box-shadow 0.2s;
+}
+#looks-good {
+  background-color: #28a745;
+  color: white;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+#feedback-form button[type="submit"] {
+  background-color: #007bff;
+  color: white;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 .button-group button:hover {
   opacity: 0.9;
 }
 
-#looks-good {
-  background-color: #28a745;
-  color: white;
-}
-
-#feedback-form button[type="submit"] {
-  background-color: #007bff;
-  color: white;
-}
-
-/* ===== Error Messages ===== */
+/* ─── Error Messages ─── */
 .error-msg {
   color: #c00;
-  font-size: 0.9em;
-  margin-top: 0.8em;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
 }
 
-/* ===== Footer pinned at bottom ===== */
+/* ─── Sticky Footer ─── */
 footer {
-  margin-top: auto;           /* push to bottom */
+  margin-top: auto;          /* push to bottom */
   text-align: center;
-  padding: 1em 0;
+  padding: 0.75rem 0;
   background: #fafafa;
   border-top: 1px solid #ddd;
-  font-size: 0.9em;
-}
-
-/* ===== Make loader & outline panes fill & center ===== */
-#loader-section,
-#outline-section {
-  display: flex;               /* turn into a flex box */
-  flex: 1;                     /* fill all remaining vertical space */
-  flex-direction: column;      /* stack spinner/text vertically */
-  justify-content: center;     /* center vertically */
-  align-items: center;         /* center horizontally */
-  padding: 1em;                /* a bit of breathing room */
-  overflow-y: auto;            /* still allow scrolling if content grows */
-}
-
-/* Remove any fixed min-height you had set on .blog-container */
-.blog-container {
-  min-height: 0 !important;
-  height: auto !important;
-}
-
-/* Ensure the main‐content can shrink/grow correctly */
-.main-content {
-  min-height: 0 !important;
+  font-size: 0.9rem;
 }
