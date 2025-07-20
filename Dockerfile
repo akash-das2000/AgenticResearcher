@@ -34,4 +34,4 @@ RUN python manage.py collectstatic --noinput || echo "Collectstatic failed (expe
 EXPOSE 8000
 
 # Start server: run migrate + start Gunicorn
-CMD bash -c "python manage.py migrate && gunicorn agentic_researcher.wsgi:application --bind 0.0.0.0:${PORT:-8000}"
+CMD bash -c "python manage.py migrate && gunicorn agentic_researcher.wsgi:application --bind 0.0.0.0:${PORT:-8000} --timeout 300"
