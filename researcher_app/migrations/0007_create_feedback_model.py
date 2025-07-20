@@ -6,7 +6,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('researcher_app', '0005_add_is_final_to_blogdraft'),
+        ('researcher_app', '0006_add_author_name_to_blogoutline'),
     ]
 
     operations = [
