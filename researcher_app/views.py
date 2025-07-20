@@ -302,7 +302,6 @@ def outline_refine(request, outline_id):
     """
     outline_obj = get_object_or_404(BlogOutline, id=outline_id)
 
-    # Handle the user’s POST (tweaks or finalizing)
     if request.method == "POST":
         feedback_text = request.POST.get("feedback", "").strip()
 
@@ -315,25 +314,24 @@ def outline_refine(request, outline_id):
 
         # 2) If they clicked “Looks Good” (name="feedback" value="OK")
         if request.POST.get("feedback") == "OK":
-            # mark outline finalized
             outline_obj.status = "finalized"
             outline_obj.save()
 
-            # seed a BlogDraft for each section in the outline JSON
+            # Seed a BlogDraft for each section in the outline JSON
             sections = outline_obj.outline_json.get("sections", [])
             for idx, sec in enumerate(sections):
                 BlogDraft.objects.create(
                     outline=outline_obj,
                     section_order=idx,
                     section_title=sec["title"],
-                    content=""              # will be generated in section_write
+                    content=""  # will be generated in section_write
                 )
 
-            # jump into the first section
+            # Jump into the first section
             return redirect("section_write", outline_id=outline_obj.id)
 
-        # 3) Otherwise, “Apply Feedback” → re-generate your outline
-    updated_outline = outline.refine_outline(
+        # 3) Otherwise (“Apply Feedback”) → re-generate the outline
+        updated_outline = outline.refine_outline(
             outline_obj.outline_json,
             feedback_text
         )
@@ -342,12 +340,14 @@ def outline_refine(request, outline_id):
 
     # On GET (or after a refinement), re–render the page
     feedbacks = outline_obj.feedbacks.filter(section_order=None)
+    sections  = outline_obj.outline_json.get("sections", [])
 
     return render(request, "blog/outline_refine.html", {
         "outline":   outline_obj,
-        "sections":  outline_obj.outline_json.get("sections", []),
+        "sections":  sections,
         "feedbacks": feedbacks,
     })
+
 
 
 def section_write(request, outline_id):
