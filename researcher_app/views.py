@@ -130,25 +130,28 @@ class ExtractPDFView(APIView):
 
 class GenerateOutlineView(APIView):
     """
-    API to generate (or re-generate) an outline on an existing BlogOutline.
-    Expects pk = BlogOutline.id
+    API to generate or refine a blog outline.
+    - POST /api/outline/<outline_id>/ with no body → fresh generate
+    - POST /api/outline/<outline_id>/ with JSON {"feedback": "..."} → refine
     """
     def post(self, request, pk, *args, **kwargs):
-        # 1) Load the placeholder outline we created in new_blog():
+        # 1) Load the existing BlogOutline
         outline_obj = get_object_or_404(BlogOutline, pk=pk)
 
-        # 2) Grab the extracted content for that outline’s PDF
+        # 2) Grab the extracted text
         content = get_object_or_404(ExtractedContent, pdf=outline_obj.pdf)
 
-        # 3) Call your LLM to generate (or refine) the outline JSON
-        new_outline = outline.generate_outline(content.text)
+        # 3) Decide whether to generate or refine
+        fb = request.data.get("feedback", None)
+        if fb:
+            new_json = outline.refine_outline(outline_obj.outline_json, fb)
+        else:
+            new_json = outline.generate_outline(content.text)
 
-        # 4) Save it back onto the same BlogOutline instance
-        outline_obj.outline_json = new_outline
+        # 4) Save & return
+        outline_obj.outline_json = new_json
         outline_obj.status       = "finalized"
         outline_obj.save()
-
-        # 5) Return the updated outline
         serializer = BlogOutlineSerializer(outline_obj)
         return Response(serializer.data, status=status.HTTP_200_OK)
             
