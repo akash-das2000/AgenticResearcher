@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import status
 from .models import (
-    UploadedPDF, ExtractedContent, BlogOutline, BlogDraft, ChatMessage, NormalizationRule
+    UploadedPDF, ExtractedContent, BlogOutline, BlogDraft, ChatMessage, NormalizationRule, Feedback
 )
 from .serializers import (
     UploadedPDFSerializer, ExtractedContentSerializer,
@@ -296,36 +296,57 @@ def new_blog(request, pdf_id):
 
 def outline_refine(request, outline_id):
     """
-    Step 2: Show the generated outline.  
-    – If user feedback is “OK” / “Looks Good”, lock it in and seed BlogDraft rows.  
-    – Otherwise call outline.refine_outline(...) and re‐render.
+    Step 1: show the generated outline, let the user tweak it,
+    record every tweak in Feedback, and once ‘Looks Good’ is clicked,
+    finalize the outline and create empty drafts for each section.
     """
     outline_obj = get_object_or_404(BlogOutline, id=outline_id)
 
+    # Handle the user’s POST (tweaks or finalizing)
     if request.method == "POST":
-        feedback = request.POST.get("feedback", "").strip()
-        if feedback.lower() in ("ok", "looks good", "no changes"):
+        feedback_text = request.POST.get("feedback", "").strip()
+
+        # 1) Log the feedback (section_order=None for outline)
+        Feedback.objects.create(
+            outline=outline_obj,
+            section_order=None,
+            text=feedback_text
+        )
+
+        # 2) If they clicked “Looks Good” (name="feedback" value="OK")
+        if request.POST.get("feedback") == "OK":
+            # mark outline finalized
             outline_obj.status = "finalized"
             outline_obj.save()
-            # Create one draft placeholder per section
-            for idx, sec in enumerate(outline_obj.outline_json.get("sections", [])):
+
+            # seed a BlogDraft for each section in the outline JSON
+            sections = outline_obj.outline_json.get("sections", [])
+            for idx, sec in enumerate(sections):
                 BlogDraft.objects.create(
                     outline=outline_obj,
                     section_order=idx,
                     section_title=sec["title"],
-                    content="",
-                    is_final=False,
+                    content=""              # will be generated in section_write
                 )
-            return redirect("section_write", outline_id=outline_id)
 
-        # refine the outline via LLM
-        new_outline = outline.refine_outline(outline_obj.outline_json, feedback)
-        outline_obj.outline_json = new_outline
+            # jump into the first section
+            return redirect("section_write", outline_id=outline_obj.id)
+
+        # 3) Otherwise, “Apply Feedback” → re-generate your outline
+        updated_outline = outline_svc.refine_outline(
+            outline_obj.outline_json,
+            feedback_text
+        )
+        outline_obj.outline_json = updated_outline
         outline_obj.save()
 
+    # On GET (or after a refinement), re–render the page
+    feedbacks = outline_obj.feedbacks.filter(section_order=None)
+
     return render(request, "blog/outline_refine.html", {
-        "outline":    outline_obj.outline_json,
-        "outline_id": outline_id,
+        "outline":   outline_obj,
+        "sections":  outline_obj.outline_json.get("sections", []),
+        "feedbacks": feedbacks,
     })
 
 
@@ -376,6 +397,7 @@ def section_write(request, outline_id):
 
     return render(request, "blog/section_write.html", {
         "draft": draft,
+        "feedbacks": feedbacks,
     })
 
 
