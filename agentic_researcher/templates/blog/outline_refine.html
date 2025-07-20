@@ -2,69 +2,168 @@
 {% load static %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/progress.css' %}">
-<style>
-  /* Hide the site‐wide footer on this page */
-  footer {
-    display: none !important;
-  }
-  /* Kill the bottom buffer since there’s no footer now */
-  .main-content {
-    margin-bottom: 0 !important;
-  }
-</style>
+  {# progress.css contains all of our two-column / full-height overrides #}
+  <link rel="stylesheet" href="{% static 'css/progress.css' %}">
 
+  <div
+    style="
+      position: fixed;
+      top: 81px;      /* match your header height */
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: grid;
+      grid-template-columns: 20% 1fr;
+      overflow: hidden;
+    "
+  >
+    <!-- ─── Left column: Feedback History ─── -->
+    <aside
+      style="
+        background: #f4f4f4;
+        border-right: 1px solid #ccc;
+        padding: 1rem;
+        overflow-y: auto;
+      "
+    >
+      <h3>Feedback History</h3>
+      <ul id="feedback-history" style="list-style:none; padding:0; margin:0;">
+        <li>🔄 Generating your blog outline…</li>
+      </ul>
+    </aside>
 
-<div class="blog-container">
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <h3>Feedback History</h3>
-    <ul id="feedback-history">
-      <li>🔄 Generating your blog outline…</li>
-    </ul>
-  </aside>
-
-  <!-- Main Content -->
-  <main class="main-content">
-    <!-- Phase Tracker -->
-    <div class="step-tracker">
-      <div class="step completed">1. Outline</div>
-      <div class="step">2. Draft</div>
-      <div class="step">3. Format</div>
-      <div class="step">4. Finalize</div>
-    </div>
-
-    <!-- Loader -->
-    <div id="loader-section">
-      <div class="spinner"></div>
-      <p id="loader-text">Generating your outline. Please wait…</p>
-    </div>
-
-    <!-- Outline Display -->
-    <section id="outline-section" style="display: none;">
-      <h2>Here’s Your Blog Outline</h2>
-      <p class="subheading">Review the structure below and let me know any tweaks.</p>
-      <ol id="outline-content" class="outline-list"></ol>
-
-      <form id="feedback-form">
-        {% csrf_token %}
-        <label for="feedback">Any adjustments or notes?</label>
-        <textarea id="feedback" rows="3" placeholder="e.g. “Combine sections 2 and 3”"></textarea>
-        <div class="button-group">
-          <!-- This button will *not* submit the form -->
-          <button type="button" id="looks-good">Looks Good, Next</button>
-          <button type="submit">Apply Feedback</button>
+    <!-- ─── Right column ─── -->
+    <main
+      class="main-content"
+      style="
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        padding: 1rem;
+        box-sizing: border-box;
+      "
+    >
+      <!-- Step tracker (fixed height) -->
+      <div class="step-tracker" style="display:flex; gap:1rem; flex:none; margin-bottom:1rem;">
+        <div class="step completed" style="flex:1; text-align:center; border-bottom:3px solid #28a745;">
+          1. Outline
         </div>
-      </form>
-    </section>
-  </main>
-</div>
+        <div class="step" style="flex:1; text-align:center; border-bottom:3px solid #ccc; color:#777;">
+          2. Draft
+        </div>
+        <div class="step" style="flex:1; text-align:center; border-bottom:3px solid #ccc; color:#777;">
+          3. Format
+        </div>
+        <div class="step" style="flex:1; text-align:center; border-bottom:3px solid #ccc; color:#777;">
+          4. Finalize
+        </div>
+      </div>
+
+      <!-- Loader pane (fills remaining space until outline arrives) -->
+      <div
+        id="loader-section"
+        style="
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          overflow: hidden;
+        "
+      >
+        <div class="spinner"></div>
+        <p id="loader-text" style="margin-top:0.5rem; font-size:0.9rem;">
+          Generating your outline… Please wait.
+        </p>
+      </div>
+
+      <!-- Outline + feedback form (hidden by JS until loaded) -->
+      <section
+        id="outline-section"
+        style="
+          display: none;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        "
+      >
+        <h2 style="margin:0 0 0.5rem;">Here’s Your Blog Outline</h2>
+        <p style="margin:0 0 1rem; color:#555;">
+          Review the structure below and let me know any tweaks.
+        </p>
+
+        <!-- outline list scrolls -->
+        <ul
+          id="outline-content"
+          class="outline-list"
+          style="
+            flex: 1;
+            overflow-y: auto;
+            list-style: none;
+            padding: 0;
+            margin: 0 0 1rem;
+          "
+        ></ul>
+
+        <!-- form pinned at bottom -->
+        <form id="feedback-form" style="flex:none; display:flex; flex-direction:column;">
+          {% csrf_token %}
+          <textarea
+            id="feedback"
+            rows="3"
+            placeholder="Any adjustments or notes?"
+            style="
+              padding:0.5rem;
+              font-size:0.9rem;
+              border:1px solid #ccc;
+              border-radius:4px;
+              margin-bottom:0.8rem;
+              resize:vertical;
+            "
+          ></textarea>
+          <div class="button-group" style="margin-top:auto; display:flex; gap:0.5rem;">
+            <button
+              type="button"
+              id="looks-good"
+              style="
+                background:#28a745;
+                color:#fff;
+                padding:0.6rem 1.2rem;
+                border:none;
+                border-radius:4px;
+                cursor:pointer;
+              "
+            >
+              Looks Good, Next
+            </button>
+            <button
+              type="submit"
+              style="
+                background:#007bff;
+                color:#fff;
+                padding:0.6rem 1.2rem;
+                border:none;
+                border-radius:4px;
+                cursor:pointer;
+              "
+            >
+              Apply Feedback
+            </button>
+          </div>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  {# hide global footer #}
+  <style>footer { display: none !important; }</style>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const outlineId = "{{ outline_id }}";          // use outline_id directly
+  const outlineId = "{{ outline_id }}";
   const loader    = document.getElementById("loader-section");
   const loaderText= document.getElementById("loader-text");
   const section   = document.getElementById("outline-section");
@@ -74,9 +173,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const textarea  = document.getElementById("feedback");
   const looksGood = document.getElementById("looks-good");
 
-  // Fetch / render outline (initial or after feedback)
   async function fetchOutline(feedback=null) {
-    loader.style.display  = "block";
+    loader.style.display  = "flex";
     section.style.display = "none";
     loaderText.textContent = feedback
       ? "Refining your outline…"
@@ -90,25 +188,25 @@ document.addEventListener("DOMContentLoaded", () => {
       },
       body: feedback ? JSON.stringify({ feedback }) : null
     });
-    if (!resp.ok) throw new Error(resp.status);
+    if (!resp.ok) throw new Error(resp.statusText);
     const data = await resp.json();
 
-    // Render the items
     list.innerHTML = "";
     (data.outline_json.sections || []).forEach(sec => {
       const li = document.createElement("li");
-      li.className = "outline-item";
       li.innerHTML = `
-        <h3 class="outline-title">${sec.title}</h3>
-        <p class="outline-desc">${sec.description}</p>
-      `;
+        <h3 style="margin:0 0 0.5rem; font-size:1rem; font-weight:600;">
+          ${sec.title}
+        </h3>
+        <p style="margin:0 0 0.8rem; font-size:0.9rem; line-height:1.4;">
+          ${sec.description}
+        </p>`;
       list.appendChild(li);
     });
 
     loader.style.display  = "none";
-    section.style.display = "block";
+    section.style.display = "flex";
 
-    // Append a sidebar entry
     const entry = document.createElement("li");
     entry.textContent = feedback
       ? `✔ Applied feedback: "${feedback}"`
@@ -116,32 +214,28 @@ document.addEventListener("DOMContentLoaded", () => {
     history.appendChild(entry);
   }
 
-  // Initial load
   fetchOutline().catch(err => {
+    loader.innerHTML = `<p style="color:#c00;">❌ Something went wrong.</p>`;
     console.error(err);
-    loader.innerHTML += `<p class="error-msg">❌ Something went wrong.</p>`;
   });
 
-  // Apply Feedback flow
   form.addEventListener("submit", async e => {
     e.preventDefault();
     const fb = textarea.value.trim();
     if (!fb) return;
     textarea.value = "";
-    history.appendChild(Object.assign(document.createElement("li"), {
-      textContent: `✏️ Feedback: ${fb}`
-    }));
+    const note = document.createElement("li");
+    note.textContent = `✏️ Feedback: ${fb}`;
+    history.appendChild(note);
     await fetchOutline(fb).catch(err => {
+      loader.innerHTML += `<p style="color:#c00;">❌ Retry feedback.</p>`;
       console.error(err);
-      loader.innerHTML += `<p class="error-msg">❌ Retry feedback.</p>`;
     });
   });
 
-  // SAFE “Looks Good, Next” navigation
   looksGood.addEventListener("click", e => {
-    e.preventDefault();    // prevent any default
-    // Redirect to the Draft page (Step 2)
-    window.location.href = `/blog/section/{{ outline_id }}/`;
+    e.preventDefault();
+    window.location.href = `/blog/section/${outlineId}/`;
   });
 });
 </script>
