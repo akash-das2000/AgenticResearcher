@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function showPostUploadActions() {
     postUploadActions.style.display = 'block';
     document.getElementById('chatBtn').onclick   = () => window.open(`/chat/${uploadedPdfId}/`,   '_blank');
-    document.getElementById('blogBtn').onclick   = () => window.open(`/blog/${uploadedPdfId}/`,   '_blank');
+    document.getElementById('blogBtn').onclick   = () => window.open(`/blog/new/${uploadedPdfId}/`, '_blank');
     document.getElementById('pptBtn').onclick    = () => window.open(`/ppt/${uploadedPdfId}/`,    '_blank');
     document.getElementById('posterBtn').onclick = () => window.open(`/poster/${uploadedPdfId}/`, '_blank');
   }
