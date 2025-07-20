@@ -12,8 +12,12 @@ body {
   font-family: 'Segoe UI', sans-serif;
 }
 .blog-container {
-  display: flex;
-  overflow: hidden;   /* single scrollbar only */
+  position: absolute;
+  top: 81px;    /* header height measured via DevTools */
+  bottom: 0;
+  left: 0;
+  right: 0;
+  overflow: hidden;
 }
 .sidebar {
   width: 20%;
