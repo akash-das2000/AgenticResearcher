@@ -17,6 +17,7 @@ from io import BytesIO
 import tempfile
 import threading
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponse
 
 
 def parse_pdf_async(pdf_id, file_path):
@@ -399,6 +400,23 @@ def blog_finish(request, outline_id):
         "html_url": html_path,
         "pdf_url":  pdf_path,
     })
+
+def blog_preview(request, outline_id):
+    """
+    Renders the assembled blog HTML inline for previewing.
+    """
+    outline = get_object_or_404(BlogOutline, id=outline_id)
+    drafts = outline.drafts.order_by("section_order")
+    sections = [
+        {"title": d.section_title, "body": d.content}
+        for d in drafts
+    ]
+    html_content = formatter.assemble_html(
+        sections,
+        blog_title=outline.title or "Untitled Blog",
+        author=(request.user.username if request.user.is_authenticated else "Anonymous")
+    )
+    return HttpResponse(html_content)
 
 
 
