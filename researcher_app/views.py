@@ -151,7 +151,7 @@ class GenerateOutlineView(APIView):
         # 5) Return the updated outline
         serializer = BlogOutlineSerializer(outline_obj)
         return Response(serializer.data, status=status.HTTP_200_OK)
-            )
+            
 
 
 class DraftSectionView(APIView):
