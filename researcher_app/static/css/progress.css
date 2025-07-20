@@ -1,19 +1,19 @@
-/* ─── Full-height Flex Layout ─── */
-html, body {
+/* ─── FULL–PAGE STRETCH OVERRIDES ─── */
+html, body, .blog-container, .main-content, #loader-section, #outline-section {
   height: 100%;
-  margin: 0; padding: 0;
+  margin: 0;
+  padding: 0;
 }
+
+/* ─── BODY & LAYOUT ─── */
 body {
   display: flex;
   flex-direction: column;
   font-family: 'Segoe UI', sans-serif;
 }
-
-/* ─── Sidebar + Main Container ─── */
 .blog-container {
-  flex: 1;
   display: flex;
-  overflow: hidden;      /* only one scrollbar */
+  overflow: hidden;   /* single scrollbar only */
 }
 .sidebar {
   width: 20%;
@@ -22,34 +22,21 @@ body {
   border-right: 1px solid #ccc;
   overflow-y: auto;
 }
-.sidebar h3 {
-  margin-top: 0;
-  font-size: 1rem;
-  border-bottom: 1px solid #ccc;
-  padding-bottom: 0.5rem;
-}
-.sidebar ul {
-  list-style: none;
-  padding: 0;
-}
-.sidebar li {
-  margin-bottom: 0.5rem;
-  font-size: 0.9rem;
-}
-
-/* ─── Main Content + Step Tracker ─── */
 .main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   padding: 1rem;
-  min-height: 0;          
+  box-sizing: border-box;
+  /* no bottom-margin needed—footer is hidden */
 }
+
+/* ─── STEP TRACKER ─── */
 .step-tracker {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 1rem;
   flex: none;
+  margin-bottom: 1rem;
 }
 .step {
   flex: 1;
@@ -65,20 +52,18 @@ body {
   border-color: #28a745;
 }
 
-/* ─── Loader Pane (full stretch) ─── */
+/* ─── LOADER (FULL HEIGHT) ─── */
 #loader-section {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 1rem;
-  min-height: 0;
-  overflow: hidden;
-  width: 100%; height: 100%;
+  justify-content: center;  /* vertical center */
+  align-items: center;      /* horizontal center */
+  overflow: hidden;         /* no scroll here */
+  box-sizing: border-box;
 }
 .spinner {
-  width: 2rem; height: 2rem;
+  width: 2rem;
+  height: 2rem;
   border: 3px solid #ccc;
   border-top-color: #007bff;
   border-radius: 50%;
@@ -90,20 +75,17 @@ body {
   font-size: 0.9rem;
 }
 
-/* ─── Outline Pane Layout ─── */
+/* ─── OUTLINE PANE (COLUMN FLEX) ─── */
 #outline-section {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 1rem;
-  min-height: 0;
-  overflow: hidden;       /* outer pane doesn’t scroll */
-  width: 100%; height: 100%;
+  overflow: hidden;         /* outer container no scroll */
+  box-sizing: border-box;
 }
 
-/* make the outline list scrollable */
+/* outline list scrolls in the top half */
 .outline-list {
-  flex: 1;               /* take up all space above form */
+  flex: 1;
   overflow-y: auto;
   list-style: none;
   margin: 0 0 1rem;
@@ -112,12 +94,10 @@ body {
 .outline-item {
   margin-bottom: 1rem;
 }
-.outline-title,
-#section-title {
+.outline-title, #section-title {
   margin: 0 0 0.5rem;
   font-size: 1rem;
   font-weight: 600;
-  line-height: 1.3;
 }
 .outline-desc {
   margin: 0 0 0.5rem;
@@ -125,11 +105,11 @@ body {
   line-height: 1.4;
 }
 
-/* ─── Feedback Form Pinned Bottom ─── */
+/* ─── FEEDBACK FORM PINNED BOTTOM ─── */
 #feedback-form {
+  flex: none;               /* only as tall as its fields */
   display: flex;
   flex-direction: column;
-  flex: none;            /* only as tall as its contents */
 }
 .subheading {
   margin-bottom: 0.5rem;
@@ -146,7 +126,7 @@ textarea {
   resize: vertical;
 }
 .button-group {
-  margin-top: auto;      /* push buttons to very bottom */
+  margin-top: auto;         /* push buttons all the way down */
   display: flex;
   gap: 0.5rem;
 }
@@ -161,26 +141,26 @@ textarea {
 }
 #looks-good {
   background-color: #28a745;
-  color: white;
+  color: #fff;
   box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 #feedback-form button[type="submit"] {
   background-color: #007bff;
-  color: white;
+  color: #fff;
   box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 .button-group button:hover {
   opacity: 0.9;
 }
 
-/* ─── Error Messages ─── */
+/* ─── ERROR MESSAGES ─── */
 .error-msg {
   color: #c00;
   font-size: 0.85rem;
   margin-top: 0.5rem;
 }
 
-/* ─── Hide Footer on This Page Only ─── */
+/* ─── HIDE FOOTER ON THIS PAGE ─── */
 footer {
   display: none !important;
 }
