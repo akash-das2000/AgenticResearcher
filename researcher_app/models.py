@@ -31,24 +31,44 @@ class ExtractedContent(models.Model):
 
 class BlogOutline(models.Model):
     """
-    Stores generated blog outlines linked to an UploadedPDF.
+    Stores generated blog outlines linked to an UploadedPDF,
+    plus metadata (title & author) once the user finalizes.
     """
-    pdf = models.ForeignKey(UploadedPDF, on_delete=models.CASCADE, related_name='outlines')
-    title = models.CharField(max_length=200, blank=True,
-                             help_text="Final blog title (filled in when ready)")
+    pdf = models.ForeignKey(
+        UploadedPDF,
+        on_delete=models.CASCADE,
+        related_name='outlines'
+    )
+    title = models.CharField(
+        max_length=200,
+        blank=True,
+        default='',
+        help_text="Final blog title"
+    )
+    author_name = models.CharField(
+        max_length=100,
+        blank=True,
+        default='',
+        help_text="Author name for the blog"
+    )
     outline_json = models.JSONField()
     STATUS_CHOICES = [
-        ('drafting', 'Editing Outline'),
-        ('finalized', 'Outline Finalized'),
+        ('drafting',   'Editing Outline'),
+        ('finalized',  'Outline Finalized'),
     ]
-    status = models.CharField(max_length=20,
-                              choices=STATUS_CHOICES,
-                              default='drafting',
-                              help_text="Have we locked in the outline yet?")
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='drafting',
+        help_text="Have we locked in the outline yet?"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Outline #{self.id} for {self.pdf.file.name} ({self.get_status_display()})"
+        return (
+            f"Outline #{self.id} for {self.pdf.file.name} "
+            f"({self.get_status_display()})"
+        )
 
 
 class BlogDraft(models.Model):
