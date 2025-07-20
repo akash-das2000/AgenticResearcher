@@ -18,6 +18,11 @@ import tempfile
 import threading
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
+from django.urls import reverse
+from django.conf import settings
+import os
+
+
 
 
 def parse_pdf_async(pdf_id, file_path):
@@ -373,32 +378,37 @@ def section_write(request, outline_id):
 
 
 def blog_finish(request, outline_id):
-    """
-    Step 4: Once all sections are finalized,
-    assemble HTML+PDF and render download links.
-    """
-    outline_obj = get_object_or_404(BlogOutline, id=outline_id)
-    drafts = outline_obj.drafts.order_by("section_order")
+    outline = get_object_or_404(BlogOutline, id=outline_id)
+    drafts = outline.drafts.order_by("section_order")
     sections = [
         {"title": d.section_title, "body": d.content}
         for d in drafts
     ]
-    # Assemble and save artifactual files
-    html_path, pdf_path = formatter.assemble_html(
-        sections,
-        blog_title=outline_obj.title or "Untitled Blog",
-        author=request.user.username if request.user.is_authenticated else "Anonymous"
-    ), None
-    # Note: if your assemble_html() returns a dict, adjust accordingly:
-    #    files = formatter.save_html_and_pdf(...)
-    #    html_path, pdf_path = files["html_path"], files["pdf_path"]
 
-    # If you need PDF via save_html_and_pdf:
-    # _, pdf_path = formatter.save_html_and_pdf(html_path, filename=f"blog_{outline_id}")
+    # Assemble HTML string
+    html_content = formatter.assemble_html(
+        sections,
+        blog_title=outline.title or "Untitled Blog",
+        author=(request.user.username if request.user.is_authenticated else "Anonymous")
+    )
+
+    # Save to disk and get file paths
+    files = formatter.save_html_and_pdf(
+        html_content,
+        filename=f"blog_{outline.id}"
+    )
+    # files == {'html_path': '/app/media/blog_5.html', 'pdf_path': '/app/media/blog_5.pdf'}
+
+    # Convert file paths to URLs under MEDIA_URL
+    from django.conf import settings
+    import os
+    html_url = settings.MEDIA_URL + os.path.basename(files['html_path'])
+    pdf_url  = settings.MEDIA_URL + os.path.basename(files['pdf_path'])
 
     return render(request, "blog/blog_finish.html", {
-        "html_url": html_path,
-        "pdf_url":  pdf_path,
+        "preview_url":  reverse('blog_preview', args=[outline_id]),
+        "html_url":     html_url,
+        "pdf_url":      pdf_url,
     })
 
 def blog_preview(request, outline_id):
