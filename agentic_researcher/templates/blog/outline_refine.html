@@ -130,7 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
   looksGood.addEventListener("click", e => {
     e.preventDefault();    // prevent any default
     // Redirect to the Draft page (Step 2)
-    window.location.href = "{% url 'section_write' outline_id=outline_id %}";
+    window.location.href = `/blog/section/{{ outline_id }}/`;
   });
 });
 </script>
