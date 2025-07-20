@@ -2,13 +2,13 @@
 {% load static %}
 
 {% block content %}
-  {# progress.css contains all of our two-column / full-height overrides #}
   <link rel="stylesheet" href="{% static 'css/progress.css' %}">
 
+  {# two-column, full-height wrapper under the 81px header #}
   <div
     style="
       position: fixed;
-      top: 81px;      /* match your header height */
+      top: 81px;
       bottom: 0;
       left: 0;
       right: 0;
@@ -17,7 +17,7 @@
       overflow: hidden;
     "
   >
-    <!-- ─── Left column: Feedback History ─── -->
+    <!-- Left: Feedback History -->
     <aside
       style="
         background: #f4f4f4;
@@ -32,7 +32,7 @@
       </ul>
     </aside>
 
-    <!-- ─── Right column ─── -->
+    <!-- Right: Outline & Form -->
     <main
       class="main-content"
       style="
@@ -43,7 +43,7 @@
         box-sizing: border-box;
       "
     >
-      <!-- Step tracker (fixed height) -->
+      <!-- Step Tracker -->
       <div class="step-tracker" style="display:flex; gap:1rem; flex:none; margin-bottom:1rem;">
         <div class="step completed" style="flex:1; text-align:center; border-bottom:3px solid #28a745;">
           1. Outline
@@ -59,7 +59,7 @@
         </div>
       </div>
 
-      <!-- Loader pane (fills remaining space until outline arrives) -->
+      <!-- Loader (until outline arrives) -->
       <div
         id="loader-section"
         style="
@@ -77,7 +77,8 @@
         </p>
       </div>
 
-      <!-- Outline + feedback form (hidden by JS until loaded) -->
+      <!-- Outline + Feedback Form -->
+      <!-- NOTE: method="post" and the Looks Good button now submits feedback=OK -->
       <section
         id="outline-section"
         style="
@@ -93,7 +94,6 @@
           Review the structure below and let me know any tweaks.
         </p>
 
-        <!-- outline list scrolls -->
         <ul
           id="outline-content"
           class="outline-list"
@@ -106,11 +106,15 @@
           "
         ></ul>
 
-        <!-- form pinned at bottom -->
-        <form id="feedback-form" style="flex:none; display:flex; flex-direction:column;">
+        <form
+          id="feedback-form"
+          method="post"
+          style="flex:none; display:flex; flex-direction:column;"
+        >
           {% csrf_token %}
           <textarea
             id="feedback"
+            name="feedback"
             rows="3"
             placeholder="Any adjustments or notes?"
             style="
@@ -123,9 +127,11 @@
             "
           ></textarea>
           <div class="button-group" style="margin-top:auto; display:flex; gap:0.5rem;">
+            <!-- This POSTs feedback=OK → seeds drafts & redirects server-side -->
             <button
-              type="button"
-              id="looks-good"
+              type="submit"
+              name="feedback"
+              value="OK"
               style="
                 background:#28a745;
                 color:#fff;
@@ -137,8 +143,10 @@
             >
               Looks Good, Next
             </button>
+            <!-- This POSTs feedback=<user text> → refines outline in place -->
             <button
               type="submit"
+              value="apply"
               style="
                 background:#007bff;
                 color:#fff;
@@ -156,7 +164,7 @@
     </main>
   </div>
 
-  {# hide global footer #}
+  {# Hide the global footer #}
   <style>footer { display: none !important; }</style>
 {% endblock %}
 
@@ -170,13 +178,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const list      = document.getElementById("outline-content");
   const history   = document.getElementById("feedback-history");
   const form      = document.getElementById("feedback-form");
-  const textarea  = document.getElementById("feedback");
-  const looksGood = document.getElementById("looks-good");
 
-  async function fetchOutline(feedback=null) {
+  // Load / refine outline via your API
+  async function fetchOutline(feedbackText=null) {
     loader.style.display  = "flex";
     section.style.display = "none";
-    loaderText.textContent = feedback
+    loaderText.textContent = feedbackText
       ? "Refining your outline…"
       : "Generating your outline…";
 
@@ -186,11 +193,14 @@ document.addEventListener("DOMContentLoaded", () => {
         'X-CSRFToken': '{{ csrf_token }}',
         'Content-Type': 'application/json'
       },
-      body: feedback ? JSON.stringify({ feedback }) : null
+      body: feedbackText
+        ? JSON.stringify({ feedback: feedbackText })
+        : null
     });
     if (!resp.ok) throw new Error(resp.statusText);
     const data = await resp.json();
 
+    // Render outline
     list.innerHTML = "";
     (data.outline_json.sections || []).forEach(sec => {
       const li = document.createElement("li");
@@ -208,34 +218,40 @@ document.addEventListener("DOMContentLoaded", () => {
     section.style.display = "flex";
 
     const entry = document.createElement("li");
-    entry.textContent = feedback
-      ? `✔ Applied feedback: "${feedback}"`
+    entry.textContent = feedbackText
+      ? `✔ Applied feedback: "${feedbackText}"`
       : "✔ Outline ready for review.";
     history.appendChild(entry);
   }
 
+  // On page load, generate outline
   fetchOutline().catch(err => {
     loader.innerHTML = `<p style="color:#c00;">❌ Something went wrong.</p>`;
     console.error(err);
   });
 
+  // Handle both buttons via the same form submit
   form.addEventListener("submit", async e => {
     e.preventDefault();
-    const fb = textarea.value.trim();
+    const fb = e.submitter.value === "OK"
+      ? "OK"
+      : document.getElementById("feedback").value.trim();
+    document.getElementById("feedback").value = "";
     if (!fb) return;
-    textarea.value = "";
-    const note = document.createElement("li");
-    note.textContent = `✏️ Feedback: ${fb}`;
-    history.appendChild(note);
-    await fetchOutline(fb).catch(err => {
-      loader.innerHTML += `<p style="color:#c00;">❌ Retry feedback.</p>`;
-      console.error(err);
-    });
-  });
-
-  looksGood.addEventListener("click", e => {
-    e.preventDefault();
-    window.location.href = `/blog/section/${outlineId}/`;
+    if (fb === "OK") {
+      // let the server handle redirect for "Looks Good"
+      form.removeEventListener("submit", arguments.callee);
+      form.submit();
+    } else {
+      // refine in place
+      const note = document.createElement("li");
+      note.textContent = `✏️ Feedback: ${fb}`;
+      history.appendChild(note);
+      await fetchOutline(fb).catch(err => {
+        console.error(err);
+        loader.innerHTML += `<p style="color:#c00;">❌ Retry feedback.</p>`;
+      });
+    }
   });
 });
 </script>
