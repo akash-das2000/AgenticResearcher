@@ -1,54 +1,129 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block content %}
-<div class="d-flex">
-  <!-- Sidebar: feedback history for this section -->
-  <aside style="width:25%; max-height:80vh; overflow:auto; padding-right:1rem;">
-    <h5>Feedback History</h5>
-    <ul class="list-unstyled">
-      {% for fb in feedbacks %}
-        <li class="mb-2">
-          <small class="text-muted">{{ fb.created_at|date:"M d, H:i" }}</small><br>
-          {{ fb.text|linebreaksbr }}
-        </li>
-      {% empty %}
-        <li><em>No feedback yet for this section.</em></li>
-      {% endfor %}
+<link rel="stylesheet" href="{% static 'css/progress.css' %}">
+
+<div class="blog-container">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <h3>Feedback History</h3>
+    <ul id="feedback-history">
+      <li>🔄 Generating your first draft section…</li>
     </ul>
   </aside>
 
-  <!-- Main area: section editor + form -->
-  <main style="flex:1">
-    <h1>Step 2: Write Section {{ draft.section_order|add:1 }}</h1>
-    <h2>{{ draft.section_title }}</h2>
-
-    <div class="card p-3 mb-3">
-      {{ draft.content|linebreaks }}
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Phase Tracker -->
+    <div class="step-tracker">
+      <div class="step completed">1. Outline</div>
+      <div class="step active">2. Draft</div>
+      <div class="step">3. Format</div>
+      <div class="step">4. Finalize</div>
     </div>
 
-    <form method="post">
-      {% csrf_token %}
-      <div class="form-group">
-        <label for="feedback">Any edits?</label><br>
-        <textarea
-          name="feedback"
-          id="feedback"
-          rows="4"
-          class="form-control"
-          placeholder="Describe your edits here…"
-        ></textarea>
-      </div>
-      <button
-        type="submit"
-        name="feedback"
-        value="OK"
-        class="btn btn-primary mt-2"
-      >
-        Looks Good
-      </button>
-      <button type="submit" class="btn btn-secondary mt-2">
-        Apply Feedback
-      </button>
-    </form>
+    <!-- Loader -->
+    <div id="loader-section">
+      <div class="spinner"></div>
+      <p id="loader-text">Generating section draft…</p>
+    </div>
+
+    <!-- Section Display -->
+    <section id="draft-section" style="display: none;">
+      <h2 id="section-title"></h2>
+      <div id="section-content" class="outline-list"></div>
+
+      <form id="feedback-form">
+        {% csrf_token %}
+        <label for="feedback">Any edits or suggestions?</label>
+        <textarea id="feedback" rows="3" placeholder="e.g. “Shorten intro”"></textarea>
+        <div class="button-group">
+          <button type="button" id="looks-good">Looks Good, Next</button>
+          <button type="submit">Apply Feedback</button>
+        </div>
+      </form>
+    </section>
   </main>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const outlineId = "{{ draft.outline.id }}";
+  const draftId   = "{{ draft.id }}";
+  const loader    = document.getElementById("loader-section");
+  const loaderText= document.getElementById("loader-text");
+  const section   = document.getElementById("draft-section");
+  const titleEl   = document.getElementById("section-title");
+  const contentEl = document.getElementById("section-content");
+  const history   = document.getElementById("feedback-history");
+  const form      = document.getElementById("feedback-form");
+  const textarea  = document.getElementById("feedback");
+  const looksGood = document.getElementById("looks-good");
+
+  // Call DraftSectionView API
+  async function fetchDraft(feedback=null) {
+    loader.style.display  = "block";
+    section.style.display = "none";
+    loaderText.textContent = feedback
+      ? "Refining this section…"
+      : "Generating section draft…";
+
+    const resp = await fetch(`/api/write/${outlineId}/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+        section_id: draftId,
+        feedback: feedback 
+      })
+    });
+    if (!resp.ok) throw new Error(resp.status);
+    const data = await resp.json();
+
+    // render
+    titleEl.textContent   = data.section_title;
+    contentEl.innerText   = data.content;
+
+    loader.style.display  = "none";
+    section.style.display = "block";
+
+    const entry = document.createElement("li");
+    entry.textContent = feedback
+      ? `✔ Refinement applied: "${feedback}"`
+      : "✔ Section draft ready.";
+    history.appendChild(entry);
+  }
+
+  // initial load
+  fetchDraft().catch(err => {
+    console.error(err);
+    loader.innerHTML += `<p class="error-msg">❌ Could not load draft.</p>`;
+  });
+
+  // feedback submit
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    const fb = textarea.value.trim();
+    if (!fb) return;
+    textarea.value = "";
+    history.appendChild(Object.assign(document.createElement("li"), {
+      textContent: `✏️ Feedback: ${fb}`
+    }));
+    await fetchDraft(fb).catch(err => {
+      console.error(err);
+      loader.innerHTML += `<p class="error-msg">❌ Retry feedback.</p>`;
+    });
+  });
+
+  // Looks Good → next section or meta
+  looksGood.addEventListener("click", () => {
+    window.location.href = `{% url 'section_write' outline_id=outlineId %}`;
+  });
+});
+</script>
 {% endblock %}
