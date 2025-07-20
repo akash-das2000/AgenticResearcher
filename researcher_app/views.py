@@ -279,18 +279,22 @@ class NormalizationRuleView(APIView):
 def new_blog(request, pdf_id):
     """
     Step 1 (launcher):
-    Immediately generate an outline from the stored text,
-    persist it, and redirect into the outline‐refine loop.
+    Create a placeholder BlogOutline (no LLM call yet),
+    then redirect into the outline‐refine page where
+    the real outline generation will happen via the API.
     """
-    pdf     = get_object_or_404(UploadedPDF, id=pdf_id)
+    pdf = get_object_or_404(UploadedPDF, id=pdf_id)
+    # Ensure the PDF has been parsed
     content = get_object_or_404(ExtractedContent, pdf=pdf)
 
-    outline_json = outline.generate_outline(content.text)
+    # 1) Create an outline record with empty JSON & pending status
     outline_obj = BlogOutline.objects.create(
         pdf=pdf,
-        outline_json=outline_json,
-        status="drafting",
+        outline_json={},       # no content yet
+        status="pending"       # mark as waiting for generation
     )
+
+    # 2) Redirect immediately into the outline phase
     return redirect("outline_refine", outline_id=outline_obj.id)
 
 
