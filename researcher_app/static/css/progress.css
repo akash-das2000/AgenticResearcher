@@ -1,8 +1,7 @@
 /* ─── Full-height Flex Layout ─── */
 html, body {
   height: 100%;
-  margin: 0;
-  padding: 0;
+  margin: 0; padding: 0;
 }
 body {
   display: flex;
@@ -44,8 +43,7 @@ body {
   display: flex;
   flex-direction: column;
   padding: 1rem;
-  min-height: 0;          /* crucial for nested scrolling */
-  margin-bottom: 3rem;    /* buffer so main area sits above fixed footer */
+  min-height: 0;          
 }
 .step-tracker {
   display: flex;
@@ -67,23 +65,20 @@ body {
   border-color: #28a745;
 }
 
-/* ─── Loader & Outline Pane ─── */
-#loader-section,
-#outline-section {
-  flex: 1;                   
+/* ─── Loader Pane (full stretch) ─── */
+#loader-section {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;   /* center spinner/text */
+  justify-content: center;
   align-items: center;
   padding: 1rem;
-  min-height: 0;             /* allow flex shrinks */
-  overflow-y: auto;          /* scroll outline when long */
-  width: 100%;
-  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%; height: 100%;
 }
 .spinner {
-  width: 2rem;
-  height: 2rem;
+  width: 2rem; height: 2rem;
   border: 3px solid #ccc;
   border-top-color: #007bff;
   border-radius: 50%;
@@ -95,12 +90,24 @@ body {
   font-size: 0.9rem;
 }
 
-/* ─── Outline / Draft List Styling ─── */
+/* ─── Outline Pane Layout ─── */
+#outline-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  min-height: 0;
+  overflow: hidden;       /* outer pane doesn’t scroll */
+  width: 100%; height: 100%;
+}
+
+/* make the outline list scrollable */
 .outline-list {
+  flex: 1;               /* take up all space above form */
+  overflow-y: auto;
   list-style: none;
-  padding: 0;
   margin: 0 0 1rem;
-  width: 100%;
+  padding: 0;
 }
 .outline-item {
   margin-bottom: 1rem;
@@ -118,7 +125,12 @@ body {
   line-height: 1.4;
 }
 
-/* ─── Feedback Form & Buttons ─── */
+/* ─── Feedback Form Pinned Bottom ─── */
+#feedback-form {
+  display: flex;
+  flex-direction: column;
+  flex: none;            /* only as tall as its contents */
+}
 .subheading {
   margin-bottom: 0.5rem;
   color: #555;
@@ -134,6 +146,7 @@ textarea {
   resize: vertical;
 }
 .button-group {
+  margin-top: auto;      /* push buttons to very bottom */
   display: flex;
   gap: 0.5rem;
 }
@@ -148,12 +161,12 @@ textarea {
 }
 #looks-good {
   background-color: #28a745;
-  color: #fff;
+  color: white;
   box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 #feedback-form button[type="submit"] {
   background-color: #007bff;
-  color: #fff;
+  color: white;
   box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 .button-group button:hover {
@@ -167,21 +180,7 @@ textarea {
   margin-top: 0.5rem;
 }
 
-/* ─── Fixed Footer ─── */
+/* ─── Hide Footer on This Page Only ─── */
 footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  background: #fafafa;
-  border-top: 1px solid #ddd;
-  padding: 0.75rem 0;
-  text-align: center;
-  font-size: 0.9rem;
-  z-index: 1000;
-}
-
-/* Only hide footer on pages with <body class="no-footer"> */
-.no-footer footer {
   display: none !important;
 }
