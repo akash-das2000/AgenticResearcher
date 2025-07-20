@@ -1,11 +1,12 @@
-/* ─── FULL–PAGE STRETCH OVERRIDES ─── */
+/* ─── Full-Page Stretch Overrides ─── */
 html, body, .blog-container, .main-content, #loader-section, #outline-section {
   height: 100%;
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
 }
 
-/* ─── BODY & LAYOUT ─── */
+/* ─── Body & Layout ─── */
 body {
   display: flex;
   flex-direction: column;
@@ -13,8 +14,10 @@ body {
 }
 .blog-container {
   display: flex;
-  overflow: hidden;   /* single scrollbar only */
+  overflow: hidden;  /* single scrollbar */
 }
+
+/* ─── Sidebar ─── */
 .sidebar {
   width: 20%;
   background: #f4f4f4;
@@ -22,16 +25,17 @@ body {
   border-right: 1px solid #ccc;
   overflow-y: auto;
 }
+
+/* ─── Main Content ─── */
 .main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   padding: 1rem;
-  box-sizing: border-box;
-  /* no bottom-margin needed—footer is hidden */
 }
 
-/* ─── STEP TRACKER ─── */
+/* ─── Step Tracker ─── */
 .step-tracker {
   display: flex;
   justify-content: space-between;
@@ -52,14 +56,13 @@ body {
   border-color: #28a745;
 }
 
-/* ─── LOADER (FULL HEIGHT) ─── */
+/* ─── Loader Pane (fills all space until outline arrives) ─── */
 #loader-section {
   display: flex;
   flex-direction: column;
-  justify-content: center;  /* vertical center */
-  align-items: center;      /* horizontal center */
-  overflow: hidden;         /* no scroll here */
-  box-sizing: border-box;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
 }
 .spinner {
   width: 2rem;
@@ -69,21 +72,22 @@ body {
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 #loader-section p {
   margin-top: 0.5rem;
   font-size: 0.9rem;
 }
 
-/* ─── OUTLINE PANE (COLUMN FLEX) ─── */
+/* ─── Outline Pane ─── */
 #outline-section {
   display: flex;
   flex-direction: column;
-  overflow: hidden;         /* outer container no scroll */
-  box-sizing: border-box;
+  overflow: hidden;
 }
 
-/* outline list scrolls in the top half */
+/* outline list scrolls */
 .outline-list {
   flex: 1;
   overflow-y: auto;
@@ -94,7 +98,7 @@ body {
 .outline-item {
   margin-bottom: 1rem;
 }
-.outline-title, #section-title {
+.outline-title {
   margin: 0 0 0.5rem;
   font-size: 1rem;
   font-weight: 600;
@@ -105,16 +109,11 @@ body {
   line-height: 1.4;
 }
 
-/* ─── FEEDBACK FORM PINNED BOTTOM ─── */
+/* ─── Feedback Form ─── */
 #feedback-form {
-  flex: none;               /* only as tall as its fields */
+  flex: none;
   display: flex;
   flex-direction: column;
-}
-.subheading {
-  margin-bottom: 0.5rem;
-  color: #555;
-  font-size: 0.9rem;
 }
 textarea {
   width: 100%;
@@ -126,7 +125,7 @@ textarea {
   resize: vertical;
 }
 .button-group {
-  margin-top: auto;         /* push buttons all the way down */
+  margin-top: auto;  /* pins to bottom of its pane */
   display: flex;
   gap: 0.5rem;
 }
@@ -153,14 +152,14 @@ textarea {
   opacity: 0.9;
 }
 
-/* ─── ERROR MESSAGES ─── */
+/* ─── Error Messages ─── */
 .error-msg {
   color: #c00;
   font-size: 0.85rem;
   margin-top: 0.5rem;
 }
 
-/* ─── HIDE FOOTER ON THIS PAGE ─── */
+/* ─── Hide the global footer on this page ─── */
 footer {
   display: none !important;
 }
