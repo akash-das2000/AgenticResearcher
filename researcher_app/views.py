@@ -12,7 +12,7 @@ from .serializers import (
     BlogOutlineSerializer, BlogDraftSerializer,
     ChatMessageSerializer, NormalizationRuleSerializer
 )
-from .services import pdf_extractor, outline, writer, formatter
+from .services import pdf_extractor, outline, writer, formatter, outline
 from io import BytesIO
 import tempfile
 import threading
@@ -333,7 +333,7 @@ def outline_refine(request, outline_id):
             return redirect("section_write", outline_id=outline_obj.id)
 
         # 3) Otherwise, “Apply Feedback” → re-generate your outline
-        updated_outline = outline_svc.refine_outline(
+    updated_outline = outline.refine_outline(
             outline_obj.outline_json,
             feedback_text
         )
