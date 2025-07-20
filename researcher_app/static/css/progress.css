@@ -166,12 +166,21 @@ textarea {
   margin-top: 0.5rem;
 }
 
-/* ─── Sticky Footer ─── */
+/* ─── Fixed Footer ─── */
 footer {
-  margin-top: auto;           /* push to bottom */
-  text-align: center;
-  padding: 0.75rem 0;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
   background: #fafafa;
   border-top: 1px solid #ddd;
+  padding: 0.75rem 0;
+  text-align: center;
   font-size: 0.9rem;
+  z-index: 1000;
+}
+
+/* ─── Buffer main content so it doesn't get hidden behind the footer ─── */
+.main-content {
+  margin-bottom: 3rem; /* roughly the height of your footer */
 }
