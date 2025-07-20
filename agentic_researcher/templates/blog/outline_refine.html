@@ -3,6 +3,17 @@
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/progress.css' %}">
+<style>
+  /* Hide the site‐wide footer on this page */
+  footer {
+    display: none !important;
+  }
+  /* Kill the bottom buffer since there’s no footer now */
+  .main-content {
+    margin-bottom: 0 !important;
+  }
+</style>
+
 
 <div class="blog-container">
   <!-- Sidebar -->
