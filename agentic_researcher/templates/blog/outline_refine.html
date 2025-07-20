@@ -1,59 +1,94 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block content %}
-<div class="d-flex">
-  <!-- Sidebar: feedback history -->
-  <aside style="width:25%; max-height:80vh; overflow:auto; padding-right:1rem;">
-    <h5>Feedback History</h5>
-    <ul class="list-unstyled">
-      {% for fb in feedbacks %}
-        <li class="mb-2">
-          <small class="text-muted">{{ fb.created_at|date:"M d, H:i" }}</small><br>
-          {{ fb.text|linebreaksbr }}
-        </li>
-      {% empty %}
-        <li><em>No feedback yet.</em></li>
-      {% endfor %}
+<link rel="stylesheet" href="{% static 'css/progress.css' %}">
+
+<div class="blog-container">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <h3>Feedback History</h3>
+    <ul id="feedback-history">
+      <li>Generating your blog outline...</li>
     </ul>
   </aside>
 
-  <!-- Main area: outline + form -->
-  <main style="flex:1">
-    <h1>Step 1: Refine Your Blog Outline</h1>
+  <!-- Main Content Area -->
+  <main class="main-content">
+    <!-- Step Tracker -->
+    <div class="step-tracker">
+      <div class="step completed">1. Outline</div>
+      <div class="step">2. Refine</div>
+      <div class="step">3. Draft</div>
+      <div class="step">4. Format</div>
+      <div class="step">5. Finish</div>
+    </div>
 
-    <h3>Current Outline</h3>
-    <ol>
-      {% for sec in sections %}
-        <li>
-          <strong>{{ sec.title }}</strong><br>
-          {{ sec.description }}
-        </li>
-      {% endfor %}
-    </ol>
+    <!-- Loader -->
+    <div id="loader-section">
+      <div class="spinner"></div>
+      <p>Generating your outline. Please wait...</p>
+    </div>
 
-    <form method="post">
-      {% csrf_token %}
-      <div class="form-group">
-        <label for="feedback">What would you like tweaked?</label><br>
-        <textarea
-          name="feedback"
-          id="feedback"
-          rows="4"
-          class="form-control"
-          placeholder="Describe your edits here…"
-        >{{ request.POST.feedback }}</textarea>
-      </div>
-      <button
-        type="submit"
-        name="feedback"
-        value="OK"
-        class="btn btn-primary mt-2"
-      >
-        Looks Good
-      </button>
-      <button type="submit" class="btn btn-secondary mt-2">
-        Apply Feedback
-      </button>
-    </form>
+    <!-- Outline Content -->
+    <div id="outline-section" style="display: none;">
+      <h2>Step 1: Refine Your Blog Outline</h2>
+      <div id="outline-content"></div>
+
+      <form method="post" id="feedback-form">
+        {% csrf_token %}
+        <label for="feedback">What would you like tweaked?</label>
+        <textarea name="feedback" id="feedback" rows="3" placeholder="Enter feedback here..."></textarea>
+        <div class="button-group">
+          <button type="button" id="looks-good">Looks Good</button>
+          <button type="submit">Apply Feedback</button>
+        </div>
+      </form>
+    </div>
   </main>
 </div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Simulated PK for demonstration — replace with actual dynamic ID
+    const pk = "{{ pk|default:1 }}";
+
+    // Trigger outline API on load
+    fetch(`/api/generate-outline/${pk}/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      document.getElementById("loader-section").style.display = "none";
+      document.getElementById("outline-section").style.display = "block";
+      document.getElementById("outline-content").innerText = JSON.stringify(data.outline_json, null, 2);
+
+      // Update sidebar
+      const history = document.getElementById("feedback-history");
+      const li = document.createElement("li");
+      li.textContent = "✔ Outline generated successfully.";
+      history.appendChild(li);
+
+      // Mark step 1 complete
+      document.querySelector(".step-tracker .step").classList.add("completed");
+    })
+    .catch(err => {
+      document.getElementById("loader-section").innerHTML = "<p style='color:red;'>Failed to generate outline. Please try again.</p>";
+    });
+
+    // Handle feedback form
+    document.getElementById("feedback-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const feedbackText = document.getElementById("feedback").value;
+      const history = document.getElementById("feedback-history");
+      const li = document.createElement("li");
+      li.textContent = `✏️ User feedback: ${feedbackText}`;
+      history.appendChild(li);
+      document.getElementById("feedback").value = '';
+    });
+  });
+</script>
 {% endblock %}
