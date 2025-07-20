@@ -21,6 +21,7 @@ from django.http import HttpResponse
 from django.urls import reverse
 from django.conf import settings
 import os
+from django import forms
 
 
 
@@ -347,7 +348,8 @@ def section_write(request, outline_id):
     )
 
     if not draft:
-        return redirect("blog_finish", outline_id=outline_id)
+        # all sections done → collect title & author
+        return redirect("blog_meta", outline_id=outline_id)
 
     full_text = get_object_or_404(ExtractedContent, pdf=outline_obj.pdf).text
 
@@ -375,6 +377,36 @@ def section_write(request, outline_id):
     return render(request, "blog/section_write.html", {
         "draft": draft,
     })
+
+
+class BlogMetaForm(forms.Form):
+    title       = forms.CharField(max_length=200, required=False, label="Blog Title")
+    author_name = forms.CharField(max_length=100, required=False, label="Author Name")
+
+def blog_meta(request, outline_id):
+    """
+    Step: collect title & author before finalizing.
+    """
+    outline = get_object_or_404(BlogOutline, id=outline_id)
+
+    if request.method == "POST":
+        form = BlogMetaForm(request.POST)
+        if form.is_valid():
+            outline.title       = form.cleaned_data["title"]
+            outline.author_name = form.cleaned_data["author_name"]
+            outline.save()
+            return redirect("blog_finish", outline_id=outline_id)
+    else:
+        form = BlogMetaForm(initial={
+            "title":       outline.title,
+            "author_name": outline.author_name
+        })
+
+    return render(request, "blog/blog_meta.html", {
+        "form":       form,
+        "outline_id": outline_id,
+    })
+
 
 
 def blog_finish(request, outline_id):
