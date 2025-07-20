@@ -1,142 +1,121 @@
+/* ===== Container & Layout (unchanged) ===== */
 .blog-container {
   display: flex;
   font-family: 'Segoe UI', sans-serif;
-  min-height: 70vh;        /* less vertical space */
+  min-height: 70vh;
 }
-
 .sidebar {
-  width: 18%;              /* slimmer */
+  width: 18%;
   background: #f4f4f4;
-  padding: 0.8em;          /* tighter padding */
+  padding: 0.8em;
   border-right: 1px solid #ccc;
   overflow-y: auto;
 }
-
-.sidebar h3 {
-  margin-top: 0;
-  font-size: 1em;          /* smaller */
-  border-bottom: 1px solid #ccc;
-  padding-bottom: 0.4em;
-}
-
-.sidebar ul {
-  list-style: none;
-  padding-left: 0;
-}
-
-.sidebar li {
-  margin-bottom: 0.4em;    /* tighter */
-  font-size: 0.9em;
-}
-
 .main-content {
   flex: 1;
-  padding: 1.5em;          /* reduced padding */
+  padding: 1.5em;
 }
 
+/* ===== Phase Tracker ===== */
 .step-tracker {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 1em;      /* tighter */
+  margin-bottom: 1em;
 }
-
 .step {
   flex: 1;
   text-align: center;
-  padding: 0.3em;          /* less padding */
-  border-bottom: 3px solid #ccc;
+  padding: 0.3em;
+  font-size: 0.9em;
   font-weight: bold;
   color: #777;
-  font-size: 0.9em;        /* smaller text */
+  border-bottom: 3px solid #ccc;
 }
+.step.completed { color: #28a745; border-color: #28a745; }
 
-.step.completed {
-  border-color: green;
-  color: green;
-}
-
+/* ===== Loader ===== */
 .spinner {
-  width: 30px;             /* smaller spinner */
-  height: 30px;
+  width: 30px; height: 30px;
   border: 3px solid #ccc;
   border-top-color: #007bff;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin: 1.5em auto;      /* less vertical margin */
+  margin: 1.5em auto;
 }
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
+@keyframes spin { to { transform: rotate(360deg); } }
 #loader-section p {
-  margin-top: 0.5em;       /* tighten under spinner */
+  margin-top: 0.5em;
   font-size: 0.9em;
 }
 
-.subheading {
-  margin-bottom: 0.8em;    /* less space */
-  color: #555;
-  font-size: 0.95em;
-}
-
+/* ===== Outline / Draft List ===== */
+/* remove default numbering */
 .outline-list {
-  list-style: decimal inside;
-  margin-bottom: 1.2em;    /* tighter */
-  padding-left: 0.8em;
+  list-style: none;
+  margin: 0 0 1.2em 0;
+  padding: 0;
 }
-
 .outline-item {
-  margin-bottom: 0.8em;    /* less gap */
+  margin-bottom: 0.8em;
 }
-
-.outline-title {
-  font-size: 1em;          /* slightly smaller */
-  margin: 0 0 0.3em;       /* reduced margin */
+.outline-title, #section-title {
+  margin: 0 0 0.3em;
+  font-size: 1em;
   font-weight: 600;
   line-height: 1.3;
 }
-
 .outline-desc {
-  margin: 0 0 0.6em;       /* tighter bottom */
+  margin: 0 0 0.6em;
   font-size: 0.95em;
   line-height: 1.4;
 }
 
+/* ===== Feedback Form ===== */
+.subheading {
+  margin-bottom: 0.8em;
+  color: #555;
+  font-size: 0.95em;
+}
 textarea {
   width: 100%;
-  font-size: 0.95em;       /* smaller */
-  padding: 0.5em;          /* reduced */
+  padding: 0.5em;
+  font-size: 0.95em;
   border: 1px solid #ccc;
-  border-radius: 6px;
+  border-radius: 5px;
   margin-bottom: 0.8em;
 }
-
 .button-group {
-  margin-top: 0.8em;       /* less space */
+  margin-top: 0.8em;
 }
-
 .button-group button {
-  padding: 0.4em 1em;      /* smaller */
+  padding: 0.6em 1.4em;
+  font-size: 1em;
   margin-right: 0.5em;
-  font-size: 0.9em;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  transition: opacity 0.2s;
+}
+.button-group button:hover {
+  opacity: 0.9;
 }
 
+/* primary action */
 #looks-good {
   background-color: #28a745;
-  color: white;
+  color: #fff;
 }
 
+/* secondary action */
 #feedback-form button[type="submit"] {
   background-color: #007bff;
-  color: white;
+  color: #fff;
 }
 
+/* ===== Errors ===== */
 .error-msg {
   color: #c00;
-  margin-top: 0.8em;       /* reduced */
   font-size: 0.9em;
+  margin-top: 0.8em;
 }
