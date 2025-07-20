@@ -9,13 +9,13 @@
   <aside class="sidebar">
     <h3>Feedback History</h3>
     <ul id="feedback-history">
-      <li>🔄 Generating your blog outline...</li>
+      <li>🔄 Generating your blog outline…</li>
     </ul>
   </aside>
 
-  <!-- Main Content Area -->
+  <!-- Main Content -->
   <main class="main-content">
-    <!-- Phase Tracker (4 steps) -->
+    <!-- Phase Tracker -->
     <div class="step-tracker">
       <div class="step completed">1. Outline</div>
       <div class="step">2. Draft</div>
@@ -29,74 +29,88 @@
       <p>Generating your outline. Please wait…</p>
     </div>
 
-    <!-- Outline Content & Feedback -->
-    <div id="outline-section" style="display: none;">
-      <h2>Step 1: Your Blog Outline</h2>
-      <div id="outline-content"></div>
+    <!-- Outline Display -->
+    <section id="outline-section" style="display: none;">
+      <h2>Here’s Your Blog Outline</h2>
+      <p class="subheading">Review the structure below and let me know any tweaks.</p>
+      <ol id="outline-content" class="outline-list"></ol>
 
       <form method="post" id="feedback-form">
         {% csrf_token %}
-        <label for="feedback">Any tweaks or notes?</label>
-        <textarea name="feedback" id="feedback" rows="3" placeholder="Enter feedback…"></textarea>
+        <label for="feedback">Any adjustments or notes?</label>
+        <textarea name="feedback" id="feedback" rows="3" placeholder="e.g. “Combine sections 2 and 3”"></textarea>
         <div class="button-group">
-          <button type="button" id="looks-good">Looks Good</button>
+          <button type="button" id="looks-good">Looks Good, Next</button>
           <button type="submit">Apply Feedback</button>
         </div>
       </form>
-    </div>
+    </section>
   </main>
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-  // Use the outline object's ID for the API call
-  const pk = "{{ outline.id }}";
+document.addEventListener("DOMContentLoaded", () => {
+  const outlineId = "{{ outline.id }}";
+  const loader    = document.getElementById("loader-section");
+  const section   = document.getElementById("outline-section");
+  const list      = document.getElementById("outline-content");
+  const history   = document.getElementById("feedback-history");
 
-  // Kick off the outline generation via the backend API
-  fetch(`/api/outline/${pk}/`, {
+  // Kick off the outline-generation API
+  fetch(`/api/outline/${outlineId}/`, {
     method: 'POST',
     headers: { 'X-CSRFToken': '{{ csrf_token }}' }
   })
-  .then(response => {
-    if (!response.ok) throw new Error("Status " + response.status);
-    return response.json();
+  .then(res => {
+    if (!res.ok) throw new Error(res.status);
+    return res.json();
   })
   .then(data => {
-    // Hide loader, show outline
-    document.getElementById("loader-section").style.display = "none";
-    document.getElementById("outline-section").style.display = "block";
+    loader.style.display  = "none";
+    section.style.display = "block";
 
-    // Render the outline JSON (or adjust to render HTML as needed)
-    document.getElementById("outline-content").innerText =
-      JSON.stringify(data.outline_json, null, 2);
+    // Build a clean list of sections
+    const sections = data.outline_json.sections || [];
+    sections.forEach((sec, i) => {
+      const item = document.createElement("li");
+      item.classList.add("outline-item");
 
-    // Update sidebar history
-    const history = document.getElementById("feedback-history");
-    const li = document.createElement("li");
-    li.textContent = "✔ Outline generated successfully.";
-    history.appendChild(li);
+      const title = document.createElement("h3");
+      title.textContent = `${i+1}. ${sec.title}`;
+      title.classList.add("outline-title");
+
+      const desc = document.createElement("p");
+      desc.textContent = sec.description;
+      desc.classList.add("outline-desc");
+
+      item.appendChild(title);
+      item.appendChild(desc);
+      list.appendChild(item);
+    });
+
+    // Record in sidebar
+    const ok = document.createElement("li");
+    ok.textContent = "✔ Outline ready for review.";
+    history.appendChild(ok);
   })
   .catch(err => {
-    console.error("Outline API error:", err);
-    const loader = document.getElementById("loader-section");
+    console.error(err);
     loader.querySelector(".spinner").style.display = "none";
-    loader.innerHTML += `<p style="color:red;">❌ Failed to generate outline. Please try again.</p>`;
+    loader.innerHTML += `<p class="error-msg">❌ Failed to generate outline. Please try again later.</p>`;
   });
 
-  // Feedback form handling
-  document.getElementById("feedback-form").addEventListener("submit", function (e) {
+  // Feedback form
+  document.getElementById("feedback-form").addEventListener("submit", e => {
     e.preventDefault();
-    const text = document.getElementById("feedback").value.trim();
-    if (!text) return;
-    const history = document.getElementById("feedback-history");
+    const txt = document.getElementById("feedback").value.trim();
+    if (!txt) return;
     const li = document.createElement("li");
-    li.textContent = `✏️ Feedback: ${text}`;
+    li.textContent = `✏️ Feedback: ${txt}`;
     history.appendChild(li);
     document.getElementById("feedback").value = '';
-    // You could optionally POST this back to the server here
   });
 
-  // “Looks Good” advances you to the Draft phase
+  // “Looks Good” button → Draft step
   document.getElementById("looks-good").addEventListener("click", () => {
     window.location.href = `{% url 'section_write' outline_id=outline.id %}`;
   });
