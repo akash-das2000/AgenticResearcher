@@ -155,3 +155,26 @@ footer {
   border-top: 1px solid #ddd;
   font-size: 0.9em;
 }
+
+/* ===== Make loader & outline panes fill & center ===== */
+#loader-section,
+#outline-section {
+  display: flex;               /* turn into a flex box */
+  flex: 1;                     /* fill all remaining vertical space */
+  flex-direction: column;      /* stack spinner/text vertically */
+  justify-content: center;     /* center vertically */
+  align-items: center;         /* center horizontally */
+  padding: 1em;                /* a bit of breathing room */
+  overflow-y: auto;            /* still allow scrolling if content grows */
+}
+
+/* Remove any fixed min-height you had set on .blog-container */
+.blog-container {
+  min-height: 0 !important;
+  height: auto !important;
+}
+
+/* Ensure the main‐content can shrink/grow correctly */
+.main-content {
+  min-height: 0 !important;
+}
