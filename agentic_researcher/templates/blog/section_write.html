@@ -1,4 +1,7 @@
+{% extends "base.html" %}
+{% block content %}
 <div class="d-flex">
+  <!-- Sidebar: feedback history for this section -->
   <aside style="width:25%; max-height:80vh; overflow:auto; padding-right:1rem;">
     <h5>Feedback History</h5>
     <ul class="list-unstyled">
@@ -13,32 +16,39 @@
     </ul>
   </aside>
 
+  <!-- Main area: section editor + form -->
   <main style="flex:1">
-    {# … your existing section editor + form … #}
+    <h1>Step 2: Write Section {{ draft.section_order|add:1 }}</h1>
+    <h2>{{ draft.section_title }}</h2>
+
+    <div class="card p-3 mb-3">
+      {{ draft.content|linebreaks }}
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="feedback">Any edits?</label><br>
+        <textarea
+          name="feedback"
+          id="feedback"
+          rows="4"
+          class="form-control"
+          placeholder="Describe your edits here…"
+        ></textarea>
+      </div>
+      <button
+        type="submit"
+        name="feedback"
+        value="OK"
+        class="btn btn-primary mt-2"
+      >
+        Looks Good
+      </button>
+      <button type="submit" class="btn btn-secondary mt-2">
+        Apply Feedback
+      </button>
+    </form>
   </main>
 </div>
-
-
-{% extends "base.html" %}
-{% block content %}
-  <h1>Step 2: Write Section {{ draft.section_order|add:1 }}</h1>
-  <h2>{{ draft.section_title }}</h2>
-
-  <div class="card p-3 mb-3">
-    {{ draft.content|linebreaks }}
-  </div>
-
-  <form method="post">
-    {% csrf_token %}
-    <div>
-      <label for="feedback">Any edits?</label><br>
-      <textarea name="feedback" id="feedback" rows="4" class="form-control"></textarea>
-    </div>
-    <button type="submit" name="feedback" value="OK" class="btn btn-primary mt-2">
-      Looks Good
-    </button>
-    <button type="submit" class="btn btn-secondary mt-2">
-      Apply Feedback
-    </button>
-  </form>
 {% endblock %}
