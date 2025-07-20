@@ -281,7 +281,6 @@ def new_blog(request, pdf_id):
     outline_json = outline.generate_outline(content.text)
     outline_obj = BlogOutline.objects.create(
         pdf=pdf,
-        user=request.user,              # or None, if you remove the FK requirement
         outline_json=outline_json,
         status="drafting",
     )
