@@ -346,6 +346,7 @@ def outline_refine(request, outline_id):
         "outline":   outline_obj,
         "sections":  sections,
         "feedbacks": feedbacks,
+        "outline_id":  outline_id, 
     })
 
 
