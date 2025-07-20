@@ -9,7 +9,7 @@
   <aside class="sidebar">
     <h3>Feedback History</h3>
     <ul id="feedback-history">
-      <li>Generating your blog outline...</li>
+      <li>🔄 Generating your blog outline...</li>
     </ul>
   </aside>
 
@@ -50,20 +50,25 @@
 
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    // Simulated PK for demonstration — replace with actual dynamic ID
-    const pk = "{{ pk|default:1 }}";
+    const pk = "{{ outline_id|default:1 }}"; // safer handling of outline_id
 
     // Trigger outline API on load
-    fetch(`/api/generate-outline/${pk}/`, {
+    fetch(`/api/outline/${pk}/`, {
       method: 'POST',
       headers: {
         'X-CSRFToken': '{{ csrf_token }}'
       }
     })
-    .then(response => response.json())
+    .then(response => {
+      if (!response.ok) throw new Error("API failed with status " + response.status);
+      return response.json();
+    })
     .then(data => {
+      // Hide loader, show content
       document.getElementById("loader-section").style.display = "none";
       document.getElementById("outline-section").style.display = "block";
+
+      // Render outline
       document.getElementById("outline-content").innerText = JSON.stringify(data.outline_json, null, 2);
 
       // Update sidebar
@@ -76,18 +81,23 @@
       document.querySelector(".step-tracker .step").classList.add("completed");
     })
     .catch(err => {
-      document.getElementById("loader-section").innerHTML = "<p style='color:red;'>Failed to generate outline. Please try again.</p>";
+      console.error("Error generating outline:", err);
+      const loader = document.getElementById("loader-section");
+      loader.querySelector(".spinner").style.display = "none";
+      loader.innerHTML += `<p style="color:red;">❌ Failed to generate outline. Please try again later.</p>`;
     });
 
     // Handle feedback form
     document.getElementById("feedback-form").addEventListener("submit", function (e) {
       e.preventDefault();
       const feedbackText = document.getElementById("feedback").value;
-      const history = document.getElementById("feedback-history");
-      const li = document.createElement("li");
-      li.textContent = `✏️ User feedback: ${feedbackText}`;
-      history.appendChild(li);
-      document.getElementById("feedback").value = '';
+      if (feedbackText.trim() !== "") {
+        const history = document.getElementById("feedback-history");
+        const li = document.createElement("li");
+        li.textContent = `✏️ User feedback: ${feedbackText}`;
+        history.appendChild(li);
+        document.getElementById("feedback").value = '';
+      }
     });
   });
 </script>
