@@ -10,6 +10,7 @@ from .views import (
     section_write,
     blog_finish,
     blog_preview,
+    blog_meta,
 )
 
 urlpatterns = [
@@ -29,7 +30,7 @@ urlpatterns = [
     path('blog/section/<int:outline_id>/', section_write, name='section_write'),
     # 4) Finish, add author meta data, preview & download
     path('blog/finish/<int:outline_id>/', blog_finish, name='blog_finish'),
-    path('blog/meta/<int:outline_id>/', views.blog_meta, name='blog_meta'),
+    path('blog/meta/<int:outline_id>/', blog_meta, name='blog_meta'),
     path('blog/preview/<int:outline_id>/',blog_preview,name='blog_preview'),
 
     # ——— Existing “view a blog” page ———
