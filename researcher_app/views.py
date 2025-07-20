@@ -263,6 +263,146 @@ class NormalizationRuleView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+
+
+# —————————————————————————————————————————
+# New “Make a Blog” workflow views (steps 2–5)
+# —————————————————————————————————————————
+
+def new_blog(request, pdf_id):
+    """
+    Step 1 (launcher):
+    Immediately generate an outline from the stored text,
+    persist it, and redirect into the outline‐refine loop.
+    """
+    pdf     = get_object_or_404(UploadedPDF, id=pdf_id)
+    content = get_object_or_404(ExtractedContent, pdf=pdf)
+
+    outline_json = outline.generate_outline(content.text)
+    outline_obj = BlogOutline.objects.create(
+        pdf=pdf,
+        user=request.user,              # or None, if you remove the FK requirement
+        outline_json=outline_json,
+        status="drafting",
+    )
+    return redirect("outline_refine", outline_id=outline_obj.id)
+
+
+def outline_refine(request, outline_id):
+    """
+    Step 2: Show the generated outline.  
+    – If user feedback is “OK” / “Looks Good”, lock it in and seed BlogDraft rows.  
+    – Otherwise call outline.refine_outline(...) and re‐render.
+    """
+    outline_obj = get_object_or_404(BlogOutline, id=outline_id)
+
+    if request.method == "POST":
+        feedback = request.POST.get("feedback", "").strip()
+        if feedback.lower() in ("ok", "looks good", "no changes"):
+            outline_obj.status = "finalized"
+            outline_obj.save()
+            # Create one draft placeholder per section
+            for idx, sec in enumerate(outline_obj.outline_json.get("sections", [])):
+                BlogDraft.objects.create(
+                    outline=outline_obj,
+                    section_order=idx,
+                    section_title=sec["title"],
+                    content="",
+                    is_final=False,
+                )
+            return redirect("section_write", outline_id=outline_id)
+
+        # refine the outline via LLM
+        new_outline = outline.refine_outline(outline_obj.outline_json, feedback)
+        outline_obj.outline_json = new_outline
+        outline_obj.save()
+
+    return render(request, "blog/outline_refine.html", {
+        "outline":    outline_obj.outline_json,
+        "outline_id": outline_id,
+    })
+
+
+def section_write(request, outline_id):
+    """
+    Step 3: Loop through each BlogDraft:
+    – On GET: if content is blank, call writer.draft_section(...)
+      and save it.
+    – Render the draft + feedback box.
+    – On POST: if feedback is “OK”, mark is_final; else call writer.refine_section(...)
+      and re‐save, then reload.
+    """
+    outline_obj = get_object_or_404(BlogOutline, id=outline_id)
+    # next unfinished section
+    draft = (
+        outline_obj.drafts
+        .filter(is_final=False)
+        .order_by("section_order")
+        .first()
+    )
+
+    if not draft:
+        return redirect("blog_finish", outline_id=outline_id)
+
+    full_text = get_object_or_404(ExtractedContent, pdf=outline_obj.pdf).text
+
+    if request.method == "POST":
+        fb = request.POST.get("feedback", "").strip()
+        if fb.lower() in ("ok", "looks good", "no changes"):
+            draft.is_final = True
+            draft.save()
+        else:
+            draft.content = writer.refine_section(
+                draft.section_title,
+                draft.content,
+                fb
+            )
+            draft.save()
+
+        return redirect("section_write", outline_id=outline_id)
+
+    # First‐time GET: generate the draft if empty
+    if not draft.content:
+        sec_info = outline_obj.outline_json["sections"][draft.section_order]
+        draft.content = writer.draft_section(sec_info, full_text)
+        draft.save()
+
+    return render(request, "blog/section_write.html", {
+        "draft": draft,
+    })
+
+
+def blog_finish(request, outline_id):
+    """
+    Step 4: Once all sections are finalized,
+    assemble HTML+PDF and render download links.
+    """
+    outline_obj = get_object_or_404(BlogOutline, id=outline_id)
+    drafts = outline_obj.drafts.order_by("section_order")
+    sections = [
+        {"title": d.section_title, "body": d.content}
+        for d in drafts
+    ]
+    # Assemble and save artifactual files
+    html_path, pdf_path = formatter.assemble_html(
+        sections,
+        blog_title=outline_obj.title or "Untitled Blog",
+        author=request.user.username if request.user.is_authenticated else "Anonymous"
+    ), None
+    # Note: if your assemble_html() returns a dict, adjust accordingly:
+    #    files = formatter.save_html_and_pdf(...)
+    #    html_path, pdf_path = files["html_path"], files["pdf_path"]
+
+    # If you need PDF via save_html_and_pdf:
+    # _, pdf_path = formatter.save_html_and_pdf(html_path, filename=f"blog_{outline_id}")
+
+    return render(request, "blog/blog_finish.html", {
+        "html_url": html_path,
+        "pdf_url":  pdf_path,
+    })
+
+
+
 # Frontend page renderers
 
 def upload_page(request):
