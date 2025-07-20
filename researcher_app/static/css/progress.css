@@ -1,4 +1,4 @@
-/* ─── Full-Height Flex Layout ─── */
+/* ─── Full-height Flex Layout ─── */
 html, body {
   height: 100%;
   margin: 0;
@@ -7,14 +7,14 @@ html, body {
 body {
   display: flex;
   flex-direction: column;
+  font-family: 'Segoe UI', sans-serif;
 }
 
-/* ─── Container & Sidebar ─── */
+/* ─── Sidebar + Main Container ─── */
 .blog-container {
-  flex: 1;                   /* fill between header & footer */
+  flex: 1;               
   display: flex;
-  overflow: hidden;          /* single scrollbar */
-  font-family: 'Segoe UI', sans-serif;
+  overflow: hidden;      /* only one scrollbar */
 }
 .sidebar {
   width: 20%;
@@ -38,13 +38,13 @@ body {
   font-size: 0.9rem;
 }
 
-/* ─── Main Content & Tracker ─── */
+/* ─── Main Content + Step Tracker ─── */
 .main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   padding: 1rem;
-  min-height: 0;             /* allow internal scroll */
+  min-height: 0;          /* crucial for nested scrolling */
 }
 .step-tracker {
   display: flex;
@@ -66,17 +66,19 @@ body {
   border-color: #28a745;
 }
 
-/* ─── Loader & Outline / Draft Sections ─── */
+/* ─── Loader & Outline Pane ─── */
 #loader-section,
 #outline-section {
-  flex: 1;                   /* fill remaining space */
+  flex: 1;                   
   display: flex;
   flex-direction: column;
-  justify-content: center;   /* center spinner / initial text */
+  justify-content: center;   /* center spinner/text */
   align-items: center;
-  overflow-y: auto;          /* scroll when outline is long */
   padding: 1rem;
-  min-height: 0;
+  min-height: 0;             /* allow flex shrinks */
+  overflow-y: auto;          /* scroll outline when long */
+  width: 100%;
+  height: 100%;
 }
 .spinner {
   width: 2rem;
@@ -90,22 +92,6 @@ body {
 #loader-section p {
   margin-top: 0.5rem;
   font-size: 0.9rem;
-}
-
-#loader-section,
-#outline-section {
-  display: flex;               /* flex container */
-  flex: 1;                     /* fill remaining flex space */
-  flex-direction: column;      /* stack spinner/text vertically */
-  justify-content: center;     /* center vertically */
-  align-items: center;         /* center horizontally */
-  padding: 1rem;               /* breathing room */
-  overflow-y: auto;            /* scroll when needed */
-
-  /* new additions: force full width & height */
-  width: 100%;
-  height: 100%;
-  min-height: 0;               /* allow flex children to shrink */
 }
 
 /* ─── Outline / Draft List Styling ─── */
@@ -131,7 +117,7 @@ body {
   line-height: 1.4;
 }
 
-/* ─── Feedback Form ─── */
+/* ─── Feedback Form & Buttons ─── */
 .subheading {
   margin-bottom: 0.5rem;
   color: #555;
@@ -161,12 +147,12 @@ textarea {
 }
 #looks-good {
   background-color: #28a745;
-  color: white;
+  color: #fff;
   box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 #feedback-form button[type="submit"] {
   background-color: #007bff;
-  color: white;
+  color: #fff;
   box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 .button-group button:hover {
@@ -182,7 +168,7 @@ textarea {
 
 /* ─── Sticky Footer ─── */
 footer {
-  margin-top: auto;          /* push to bottom */
+  margin-top: auto;           /* push to bottom */
   text-align: center;
   padding: 0.75rem 0;
   background: #fafafa;
