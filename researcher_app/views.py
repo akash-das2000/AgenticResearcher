@@ -159,31 +159,49 @@ class GenerateOutlineView(APIView):
 
 class DraftSectionView(APIView):
     """
-    API to draft blog sections.
+    API to draft or refine blog sections.
     """
     def post(self, request, pk, *args, **kwargs):
+        # 1) Lookup the outline
+        outline_obj = get_object_or_404(BlogOutline, pk=pk)
+
+        # 2) Must have a section_id for an existing draft
+        draft_id = request.data.get("section_id")
+        if not draft_id:
+            raise ParseError(detail="`section_id` is required")
+
+        # 3) Fetch the BlogDraft
+        draft_obj = get_object_or_404(BlogDraft, pk=draft_id, outline=outline_obj)
+
+        # 4) Grab full extracted text
+        context = get_object_or_404(ExtractedContent, pdf=outline_obj.pdf).text
+
+        # 5) Pull the corresponding section info from the outline JSON
+        sections = outline_obj.outline_json.get("sections", [])
         try:
-            outline_obj = BlogOutline.objects.get(pk=pk)
-            section = request.data.get('section')
-            context = ExtractedContent.objects.get(pdf=outline_obj.pdf).text
-            body = writer.draft_section(section, context)
-            draft_obj = BlogDraft.objects.create(
-                outline=outline_obj,
-                section_title=section['title'],
-                content=body
+            sec_info = sections[draft_obj.section_order]
+        except (IndexError, TypeError):
+            raise ParseError(detail="Invalid section_order on draft")
+
+        # 6) Decide whether to generate or refine
+        feedback = request.data.get("feedback", "").strip()
+        if feedback:
+            # refine existing draft
+            new_body = writer.refine_section(
+                draft_obj.section_title,
+                draft_obj.content,
+                feedback
             )
-            serializer = BlogDraftSerializer(draft_obj)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        except BlogOutline.DoesNotExist:
-            return Response(
-                {"error": "Outline not found."},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        except ExtractedContent.DoesNotExist:
-            return Response(
-                {"error": "Extracted content not found."},
-                status=status.HTTP_404_NOT_FOUND
-            )
+        else:
+            # first‐time generation
+            new_body = writer.draft_section(sec_info, context)
+
+        # 7) Save and return
+        draft_obj.content = new_body
+        draft_obj.save()
+
+        serializer = BlogDraftSerializer(draft_obj)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class FormatBlogView(APIView):
