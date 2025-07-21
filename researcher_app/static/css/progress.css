@@ -55,6 +55,10 @@ body {
   color: #28a745;
   border-color: #28a745;
 }
+.step.active {
+  color: #007bff;
+  border-color: #007bff;
+}
 
 /* ─── Loader Pane (fills all space until outline arrives) ─── */
 #loader-section {
