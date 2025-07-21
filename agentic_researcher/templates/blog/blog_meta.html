@@ -43,35 +43,24 @@
       "
     >
       <!-- Step tracker -->
-      <div class="step-tracker" style="display:flex; gap:1rem; margin-bottom:1rem;">
+      <div class="step-tracker" style="margin-bottom:1rem;">
         <a
           href="{% url 'outline_refine' outline_id=outline_id %}"
           class="step completed"
-          style="flex:1; text-align:center;"
-        >
-          1. Outline
-        </a>
+        >1. Outline</a>
         <a
           href="{% url 'section_write' outline_id=outline_id %}"
           class="step completed"
-          style="flex:1; text-align:center;"
-        >
-          2. Draft
-        </a>
+        >2. Draft</a>
         <a
           href="{% url 'blog_meta' outline_id=outline_id %}"
           class="step active"
-          style="flex:1; text-align:center;"
-        >
-          3. Format
-        </a>
+        >3. Format</a>
         <a
           href="{% url 'blog_finish' outline_id=outline_id %}"
-          class="step"
-          style="flex:1; text-align:center;"
-        >
-          4. Finalize
-        </a>
+          id="step-finalize"
+          class="step disabled"
+        >4. Finalize</a>
       </div>
 
       <!-- Loader -->
@@ -96,7 +85,6 @@
         <h2 style="margin:0 0 0.5rem;">Blog Metadata</h2>
         <form id="meta-form" method="post" style="flex:1; display:flex; flex-direction:column;">
           {% csrf_token %}
-          <!-- Title & Author are pure inputs -->
           <label for="title-input"><strong>Title:</strong></label>
           <input
             id="title-input"
@@ -117,7 +105,6 @@
             style="padding:0.5rem; margin-bottom:1rem; border:1px solid #ccc; border-radius:4px;"
           />
 
-          <!-- Description is generated and refinable -->
           <label for="description"><strong>Description:</strong></label>
           <textarea
             id="description"
@@ -162,25 +149,28 @@
     #feedback-history li { cursor:pointer; padding:0.2rem 0; }
     #feedback-history li:hover { text-decoration:underline; }
     #feedback-history li.finalized { color:#28a745; font-weight:bold; }
+    .step.disabled { pointer-events: none; opacity: 0.5; }
   </style>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const outlineId  = "{{ outline_id }}",
-        storageKey = `metaDescHistory_${outlineId}`,
-        loader     = document.getElementById("loader-section"),
-        loaderText = document.getElementById("loader-text"),
-        section    = document.getElementById("meta-section"),
-        titleInput = document.getElementById("title-input"),
-        authorInput= document.getElementById("author-input"),
-        descArea   = document.getElementById("description"),
-        feedbackTA = document.getElementById("feedback"),
-        historyEl  = document.getElementById("feedback-history"),
-        applyBtn   = document.getElementById("apply-feedback");
+  const outlineId    = "{{ outline_id }}";
+  const storageKey   = `metaDescHistory_${outlineId}`;
+  const loader       = document.getElementById("loader-section");
+  const loaderText   = document.getElementById("loader-text");
+  const section      = document.getElementById("meta-section");
+  const titleInput   = document.getElementById("title-input");
+  const authorInput  = document.getElementById("author-input");
+  const descArea     = document.getElementById("description");
+  const feedbackTA   = document.getElementById("feedback");
+  const historyEl    = document.getElementById("feedback-history");
+  const applyBtn     = document.getElementById("apply-feedback");
+  const looksGoodBtn = document.getElementById("looks-good");
+  const finalizeStep = document.getElementById("step-finalize");
 
-  // Load per-outline history
+  // 1) Load history from localStorage
   let historyStore = JSON.parse(localStorage.getItem(storageKey) || "[]");
   historyEl.innerHTML = "";
   historyStore.forEach((snap, idx) => {
@@ -188,7 +178,9 @@ document.addEventListener("DOMContentLoaded", () => {
     li.textContent   = snap.label;
     li.dataset.idx   = idx;
     if (snap.finalized) li.classList.add("finalized");
-    li.addEventListener("click", () => descArea.value = historyStore[idx].desc);
+    li.addEventListener("click", () => {
+      descArea.value = historyStore[idx].desc;
+    });
     historyEl.appendChild(li);
   });
 
@@ -203,43 +195,57 @@ document.addEventListener("DOMContentLoaded", () => {
     li.textContent   = label;
     li.dataset.idx   = historyStore.length - 1;
     if (finalized) li.classList.add("finalized");
-    li.addEventListener("click", () => descArea.value = entry.desc);
+    li.addEventListener("click", () => {
+      descArea.value = entry.desc;
+    });
     historyEl.appendChild(li);
+
+    // Unlock Finalize step
+    if (finalized) finalizeStep.classList.remove("disabled");
   }
 
   async function fetchDescription(feedback=null) {
-    loader.style.display = "flex";
-    section.style.display= "none";
-    loaderText.textContent = feedback ? "Refining description…" : "Generating description…";
+    loader.style.display  = "flex";
+    section.style.display = "none";
+    loaderText.textContent = feedback
+      ? "Refining description…"
+      : "Generating description…";
 
     const resp = await fetch(`/api/meta/${outlineId}/`, {
       method: 'POST',
-      headers: {'X-CSRFToken': '{{ csrf_token }}','Content-Type':'application/json'},
-      body: feedback ? JSON.stringify({feedback}) : null
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}',
+        'Content-Type': 'application/json'
+      },
+      body: feedback ? JSON.stringify({ feedback }) : null
     });
     if (!resp.ok) throw new Error(resp.statusText);
-    const {description} = await resp.json();
+    const { description } = await resp.json();
     descArea.value = description;
     recordHistory(description, feedback ? `✏️ Feedback: "${feedback}"` : "✔ Description ready");
-    loader.style.display = "none";
-    section.style.display= "flex";
+    loader.style.display  = "none";
+    section.style.display = "flex";
   }
 
-  // Initial load
+  // initial load
   fetchDescription().catch(err => {
     loader.innerHTML = `<p style="color:#c00;">❌ Could not load.</p>`;
     console.error(err);
   });
 
-  // Apply feedback inline
+  // inline feedback
   applyBtn.addEventListener("click", async () => {
     const fb = feedbackTA.value.trim();
     if (!fb) return;
     feedbackTA.value = "";
-    await fetchDescription(fb).catch(console.error);
+    await fetchDescription(fb);
   });
 
-  // On “Looks Good”, let the form POST title/author/description to your Django view
+  // on Looks Good → finalize & let form POST to view
+  looksGoodBtn.addEventListener("click", () => {
+    recordHistory(descArea.value, "✔ Finalized description.", true);
+    // the form will then submit, redirecting to preview page
+  });
 });
 </script>
 {% endblock %}
