@@ -44,17 +44,17 @@
       "
     >
       <!-- Step Tracker -->
-      <div class="step-tracker" style="display:flex; gap:1rem; flex:none; margin-bottom:1rem;">
+      <div class="step-tracker" style="margin-bottom:1rem;">
         <a href="{% url 'outline_refine' outline_id=outline_id %}" class="step active">
           1. Outline
         </a>
-        <a href="{% url 'section_write' outline_id=outline_id %}" class="step">
+        <a href="{% url 'section_write' outline_id=outline_id %}" class="step disabled">
           2. Draft
         </a>
-        <a href="{% url 'blog_meta' outline_id=outline_id %}" class="step">
+        <a href="{% url 'blog_meta' outline_id=outline_id %}" class="step disabled">
           3. Format
         </a>
-        <a href="{% url 'blog_finish' outline_id=outline_id %}" class="step">
+        <a href="{% url 'blog_finish' outline_id=outline_id %}" class="step disabled">
           4. Finalize
         </a>
       </div>
@@ -80,81 +80,28 @@
       <!-- Outline + Feedback Form -->
       <section
         id="outline-section"
-        style="
-          display: none;
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
-        "
+        style="display: none; flex: 1; flex-direction: column; overflow: hidden;"
       >
         <h2 style="margin:0 0 0.5rem;">Here’s Your Blog Outline</h2>
         <p style="margin:0 0 1rem; color:#555;">
           Review the structure below and let me know any tweaks.
         </p>
 
-        <ul
-          id="outline-content"
-          class="outline-list"
-          style="
-            flex: 1;
-            overflow-y: auto;
-            list-style: none;
-            padding: 0;
-            margin: 0 0 1rem;
-          "
-        ></ul>
+        <ul id="outline-content" class="outline-list"></ul>
 
-        <form
-          id="feedback-form"
-          method="post"
-          style="flex:none; display:flex; flex-direction:column;"
-        >
+        <form id="feedback-form" method="post" style="display:flex; flex-direction:column;">
           {% csrf_token %}
           <textarea
             id="feedback"
             name="feedback"
             rows="3"
             placeholder="Any adjustments or notes?"
-            style="
-              padding:0.5rem;
-              font-size:0.9rem;
-              border:1px solid #ccc;
-              border-radius:4px;
-              margin-bottom:0.8rem;
-              resize:vertical;
-            "
           ></textarea>
-          <div class="button-group" style="margin-top:auto; display:flex; gap:0.5rem;">
-            <!-- Finalizes & redirects -->
-            <button
-              id="looks-good"
-              type="submit"
-              name="feedback"
-              value="OK"
-              style="
-                background:#28a745;
-                color:#fff;
-                padding:0.6rem 1.2rem;
-                border:none;
-                border-radius:4px;
-                cursor:pointer;
-              "
-            >
+          <div class="button-group">
+            <button id="looks-good" type="submit" name="feedback" value="OK">
               Looks Good, Next
             </button>
-            <!-- Inline refine -->
-            <button
-              type="submit"
-              style="
-                background:#007bff;
-                color:#fff;
-                padding:0.6rem 1.2rem;
-                border:none;
-                border-radius:4px;
-                cursor:pointer;
-              "
-            >
+            <button type="submit">
               Apply Feedback
             </button>
           </div>
@@ -164,8 +111,15 @@
   </div>
 
   <style>
-    footer { display: none !important; }
-    /* clickable history */
+    footer { display:none !important; }
+
+    /* Disable forward steps */
+    .step.disabled {
+      pointer-events: none;
+      opacity: 0.5;
+    }
+
+    /* History list styling */
     #feedback-history li {
       cursor: pointer;
       padding: 0.2rem 0;
@@ -173,11 +127,12 @@
     #feedback-history li:hover {
       text-decoration: underline;
     }
-    /* finalized style */
     #feedback-history li.finalized {
       color: #28a745;
       font-weight: bold;
     }
+
+    /* Textarea & buttons rely on your existing progress.css */
   </style>
 {% endblock %}
 
@@ -185,7 +140,7 @@
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const outlineId  = "{{ outline_id }}";
-  const storageKey = `outlineHistory_${outlineId}`;
+  const storageKey = `outlineCache_${outlineId}`;
 
   const loader     = document.getElementById("loader-section");
   const loaderText = document.getElementById("loader-text");
@@ -195,53 +150,53 @@ document.addEventListener("DOMContentLoaded", () => {
   const form       = document.getElementById("feedback-form");
   const textarea   = document.getElementById("feedback");
 
-  // 1) Load only this outline's history
-  let historyStore = JSON.parse(localStorage.getItem(storageKey) || "[]");
+  // Load cache of outline snapshots, or start empty
+  let cache = JSON.parse(localStorage.getItem(storageKey) || "[]");
   historyEl.innerHTML = "";
-  historyStore.forEach((snap, idx) => {
+  cache.forEach((snap, idx) => {
     const li = document.createElement("li");
-    li.textContent   = snap.label;
-    li.dataset.index = idx;
+    li.textContent = snap.label;
     if (snap.finalized) li.classList.add("finalized");
-    li.addEventListener("click", () => renderOutline(historyStore[li.dataset.index].sections));
+    li.addEventListener("click", () => renderSections(snap.sections));
     historyEl.appendChild(li);
   });
 
-  function saveHistory() {
-    localStorage.setItem(storageKey, JSON.stringify(historyStore));
+  function saveCache() {
+    localStorage.setItem(storageKey, JSON.stringify(cache));
   }
+
   function recordHistory(label, sections, finalized=false) {
-    const idx = historyStore.length;
-    historyStore.push({ label, sections, finalized });
-    saveHistory();
-
+    const snap = { label, sections, finalized };
+    cache.push(snap);
+    saveCache();
     const li = document.createElement("li");
-    li.textContent   = label;
-    li.dataset.index = idx;
+    li.textContent = label;
     if (finalized) li.classList.add("finalized");
-    li.addEventListener("click", () => renderOutline(historyStore[idx].sections));
+    li.addEventListener("click", () => renderSections(sections));
     historyEl.appendChild(li);
+
+    // Once finalized, unlock step 2
+    if (finalized) {
+      document.querySelector('.step-tracker a.step.disabled').classList.remove('disabled');
+    }
   }
 
-  function renderOutline(sections) {
+  function renderSections(sections) {
     list.innerHTML = "";
     sections.forEach(sec => {
       const li = document.createElement("li");
       li.innerHTML = `
-        <h3 style="margin:0 0 0.5rem; font-size:1rem; font-weight:600;">
-          ${sec.title}
-        </h3>
-        <p style="margin:0 0 0.8rem; font-size:0.9rem; line-height:1.4;">
-          ${sec.description}
-        </p>`;
+        <h3 class="outline-title">${sec.title}</h3>
+        <p class="outline-desc">${sec.description}</p>
+      `;
       list.appendChild(li);
     });
   }
 
-  async function fetchOutline(feedbackText = null) {
+  async function fetchOutline(feedback=null) {
     loader.style.display  = "flex";
     section.style.display = "none";
-    loaderText.textContent = feedbackText
+    loaderText.textContent = feedback
       ? "Refining your outline…"
       : "Generating your outline…";
 
@@ -251,46 +206,40 @@ document.addEventListener("DOMContentLoaded", () => {
         'X-CSRFToken': '{{ csrf_token }}',
         'Content-Type': 'application/json'
       },
-      body: feedbackText
-        ? JSON.stringify({ feedback: feedbackText })
-        : null
+      body: feedback ? JSON.stringify({ feedback }) : null
     });
-    if (!resp.ok) throw new Error(resp.statusText);
+    if (!resp.ok) {
+      loader.innerHTML = `<p style="color:#c00;">❌ Something went wrong.</p>`;
+      return;
+    }
     const data = await resp.json();
 
-    renderOutline(data.outline_json.sections);
-
+    renderSections(data.outline_json.sections);
     loader.style.display  = "none";
     section.style.display = "flex";
 
-    if (feedbackText) {
-      recordHistory(`✏️ Applied feedback: "${feedbackText}"`, data.outline_json.sections);
+    if (feedback) {
+      recordHistory(`✏️ Applied feedback: "${feedback}"`, data.outline_json.sections);
     } else {
       recordHistory("✔ Outline ready for review.", data.outline_json.sections);
     }
   }
 
   // initial load
-  fetchOutline().catch(err => {
-    loader.innerHTML = `<p style="color:#c00;">❌ Something went wrong.</p>`;
-    console.error(err);
-  });
+  fetchOutline();
 
-  form.addEventListener("submit", async e => {
-    if (e.submitter && e.submitter.id === "looks-good") {
-      // record before redirect
-      const last = historyStore[historyStore.length - 1];
+  form.addEventListener("submit", e => {
+    if (e.submitter.id === "looks-good") {
+      // mark finalized & unlock Draft step
+      const last = cache[cache.length - 1];
       if (last) recordHistory("✔ Finalized outline.", last.sections, true);
-      return;  // default submit → redirect
+      return; // will redirect to Draft page
     }
     e.preventDefault();
     const fb = textarea.value.trim();
     if (!fb) return;
     textarea.value = "";
-    await fetchOutline(fb).catch(err => {
-      console.error(err);
-      loader.innerHTML += `<p style="color:#c00;">❌ Retry feedback.</p>`;
-    });
+    fetchOutline(fb);
   });
 });
 </script>
