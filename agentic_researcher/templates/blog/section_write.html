@@ -4,146 +4,63 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/progress.css' %}">
 
-{# two-column, full-height wrapper under the 81px header #}
-<div
-  style="
-    position: fixed;
-    top: 81px;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    display: grid;
-    grid-template-columns: 20% 1fr;
-    overflow: hidden;
-  "
->
-  <!-- Left: Feedback History -->
-  <aside
-    style="
-      background: #f4f4f4;
-      border-right: 1px solid #ccc;
-      padding: 1rem;
-      overflow-y: auto;
-    "
-  >
+<div class="blog-container">
+  <!-- Sidebar: Feedback History -->
+  <aside class="sidebar">
     <h3>Feedback History</h3>
-    <ul id="feedback-history" style="list-style:none; padding:0; margin:0;">
+    <ul id="feedback-history">
       <li>🔄 Loading history…</li>
     </ul>
   </aside>
 
-  <!-- Right: Section & Form -->
-  <main
-    class="main-content"
-    style="
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      padding: 1rem;
-      box-sizing: border-box;
-    "
-  >
+  <!-- Main Content -->
+  <main class="main-content">
     <!-- Phase Tracker -->
-    <div class="step-tracker" style="display:flex; gap:1rem; flex:none; margin-bottom:1rem;">
-      <a href="{% url 'outline_refine' outline_id=draft.outline.id %}" class="step completed" style="flex:1; text-align:center;">
+    <div class="step-tracker">
+      {% comment %}
+        Build ordered list of section IDs
+      {% endcomment %}
+      {% with drafts=outline.drafts.all|dictsort:"section_order" %}
+      <script>
+        const SECTION_IDS = [
+          {% for d in drafts %}{{ d.id }}{% if not forloop.last %}, {% endif %}{% endfor %}
+        ];
+      </script>
+      {% endwith %}
+
+      <a href="{% url 'outline_refine' outline_id=draft.outline.id %}" class="step completed">
         1. Outline
       </a>
-      <a href="{% url 'section_write' outline_id=draft.outline.id %}" class="step active" style="flex:1; text-align:center;">
+      <a href="#" id="step-draft" class="step active">
         2. Draft
       </a>
-      <a href="{% url 'blog_meta' outline_id=draft.outline.id %}" class="step" style="flex:1; text-align:center;">
+      <a href="{% url 'blog_meta' outline_id=draft.outline.id %}" class="step" id="step-format">
         3. Format
       </a>
-      <a href="{% url 'blog_finish' outline_id=draft.outline.id %}" class="step" style="flex:1; text-align:center;">
+      <a href="{% url 'blog_finish' outline_id=draft.outline.id %}" class="step" id="step-finalize">
         4. Finalize
       </a>
     </div>
 
-    <!-- Loader (until draft arrives) -->
-    <div
-      id="loader-section"
-      style="
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        overflow: hidden;
-      "
-    >
+    <!-- Loader -->
+    <div id="loader-section">
       <div class="spinner"></div>
-      <p id="loader-text" style="margin-top:0.5rem; font-size:0.9rem;">
-        Generating section draft…
-      </p>
+      <p id="loader-text">Generating section draft…</p>
     </div>
 
-    <!-- Draft + Feedback Form -->
-    <section
-      id="draft-section"
-      data-current-section-id=""
-      style="
-        display: none;
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      "
-    >
-      <h2 id="section-title" style="margin:0 0 0.5rem;"></h2>
-      <div
-        id="section-content"
-        class="outline-list"
-        style="flex:1; overflow-y:auto; padding:0; margin:0 0 1rem;"
-      ></div>
+    <!-- Draft Section -->
+    <section id="draft-section" data-current-section-id="" style="display:none;">
+      <h2 id="section-title"></h2>
+      <div id="section-content" class="outline-list"></div>
 
-      <form
-        id="feedback-form"
-        method="post"
-        style="flex:none; display:flex; flex-direction:column;"
-      >
+      <form id="feedback-form" method="post">
         {% csrf_token %}
-        <textarea
-          id="feedback"
-          name="feedback"
-          rows="3"
-          placeholder="Any edits or suggestions?"
-          style="
-            padding:0.5rem;
-            font-size:0.9rem;
-            border:1px solid #ccc;
-            border-radius:4px;
-            margin-bottom:0.8rem;
-            resize:vertical;
-          "
-        ></textarea>
-        <div class="button-group" style="display:flex; gap:0.5rem;">
-          <button
-            id="looks-good"
-            type="submit"
-            name="feedback"
-            value="OK"
-            style="
-              background:#28a745;
-              color:#fff;
-              padding:0.6rem 1.2rem;
-              border:none;
-              border-radius:4px;
-              cursor:pointer;
-            "
-          >
+        <textarea id="feedback" name="feedback" rows="3" placeholder="Any edits or suggestions?"></textarea>
+        <div class="button-group">
+          <button id="looks-good" type="submit" name="feedback" value="OK">
             Looks Good, Next
           </button>
-          <button
-            type="submit"
-            style="
-              background:#007bff;
-              color:#fff;
-              padding:0.6rem 1.2rem;
-              border:none;
-              border-radius:4px;
-              cursor:pointer;
-            "
-          >
+          <button type="submit">
             Apply Feedback
           </button>
         </div>
@@ -154,75 +71,78 @@
 
 <style>
   footer { display: none !important; }
-  #feedback-history li {
-    cursor: pointer;
-    padding: 0.2rem 0;
-  }
-  #feedback-history li:hover {
-    text-decoration: underline;
-  }
-  #feedback-history li.finalized {
-    color: #28a745;
-    font-weight: bold;
-  }
+  /* disable future steps */
+  .step.disabled { pointer-events: none; opacity: 0.5; }
+  /* History styling */
+  #feedback-history li { cursor: pointer; padding: 0.2rem 0; }
+  #feedback-history li:hover { text-decoration: underline; }
+  #feedback-history li.finalized { color: #28a745; font-weight: bold; }
 </style>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const outlineId  = "{{ draft.outline.id }}";
-  const storageKey = `sectionHistory_${outlineId}`;
-  const draftId    = "{{ draft.id }}";
-  const loader     = document.getElementById("loader-section");
-  const loaderText = document.getElementById("loader-text");
-  const section    = document.getElementById("draft-section");
-  const titleEl    = document.getElementById("section-title");
-  const contentEl  = document.getElementById("section-content");
-  const historyEl  = document.getElementById("feedback-history");
-  const form       = document.getElementById("feedback-form");
-  const textarea   = document.getElementById("feedback");
+  const outlineId    = "{{ draft.outline.id }}";
+  const initialId    = Number("{{ draft.id }}");
+  const storageKey   = `sectionCache_${outlineId}`;
+  const loader       = document.getElementById("loader-section");
+  const loaderText   = document.getElementById("loader-text");
+  const section      = document.getElementById("draft-section");
+  const titleEl      = document.getElementById("section-title");
+  const contentEl    = document.getElementById("section-content");
+  const historyEl    = document.getElementById("feedback-history");
+  const form         = document.getElementById("feedback-form");
+  const textarea     = document.getElementById("feedback");
+  const stepDraft    = document.getElementById("step-draft");
+  const stepFormat   = document.getElementById("step-format");
+  const stepFinalize = document.getElementById("step-finalize");
 
-  // 1) Load only this section's history
-  let historyList = JSON.parse(localStorage.getItem(storageKey) || "[]");
+  // Load cached sections or start empty
+  let cache = JSON.parse(localStorage.getItem(storageKey) || "{}");
+  // rebuild history list
   historyEl.innerHTML = "";
-  historyList.forEach((entry, idx) => {
+  Object.values(cache).forEach(entry => {
     const li = document.createElement("li");
-    li.textContent     = entry.label;
-    li.dataset.index   = idx;
+    li.textContent = entry.label;
     if (entry.finalized) li.classList.add("finalized");
-    li.addEventListener("click", () => {
-      titleEl.textContent  = entry.title;
-      contentEl.innerHTML  = entry.content;
-    });
+    li.addEventListener("click", () => renderSection(entry.id));
     historyEl.appendChild(li);
   });
 
-  function saveHistory() {
-    localStorage.setItem(storageKey, JSON.stringify(historyList));
+  function saveCache() {
+    localStorage.setItem(storageKey, JSON.stringify(cache));
   }
+
   function recordHistory(id, label, finalized=false) {
-    const entry = {
+    cache[id] = {
       id,
       label,
       title:   titleEl.textContent,
       content: contentEl.innerHTML,
       finalized
     };
-    historyList.push(entry);
-    saveHistory();
+    saveCache();
     const li = document.createElement("li");
-    li.textContent   = label;
-    li.dataset.index = historyList.length - 1;
+    li.textContent = label;
     if (finalized) li.classList.add("finalized");
-    li.addEventListener("click", () => {
-      titleEl.textContent  = entry.title;
-      contentEl.innerHTML  = entry.content;
-    });
+    li.addEventListener("click", () => renderSection(id));
     historyEl.appendChild(li);
+    // unlock Draft step
+    stepDraft.classList.remove("disabled");
   }
 
-  async function fetchDraft(feedback = null) {
+  function renderSection(id) {
+    const entry = cache[id];
+    titleEl.textContent = entry.title;
+    contentEl.innerHTML = entry.content;
+    section.dataset.currentSectionId = id;
+    loader.style.display  = "none";
+    section.style.display = "flex";
+    updateNav();
+  }
+
+  async function fetchSection(id, feedback=null) {
     loader.style.display  = "flex";
     section.style.display = "none";
     loaderText.textContent = feedback
@@ -235,45 +155,63 @@ document.addEventListener("DOMContentLoaded", () => {
         'X-CSRFToken': '{{ csrf_token }}',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ section_id: draftId, feedback })
+      body: JSON.stringify({ section_id:id, feedback })
     });
     if (!resp.ok) throw new Error(resp.statusText);
     const data = await resp.json();
 
-    section.dataset.currentSectionId = data.id;
-    titleEl.textContent   = data.section_title;
-    contentEl.innerHTML   = data.content;
-
-    loader.style.display  = "none";
-    section.style.display = "flex";
-
-    if (feedback) {
-      recordHistory(data.id, `✏️ Refinement: "${feedback}"`);
-    } else {
-      recordHistory(data.id, `✔ Section: "${data.section_title}"`);
-    }
+    // cache it
+    cache[id] = {
+      id,
+      label: feedback ? `✏️ ${feedback}` : `✔ ${data.section_title}`,
+      title: data.section_title,
+      content: data.content,
+      finalized: false
+    };
+    saveCache();
+    return data;
   }
 
-  // initial load
-  fetchDraft().catch(err => {
-    console.error(err);
-    loader.innerHTML = `<p style="color:#c00;">❌ Could not load draft.</p>`;
-  });
+  async function loadSection(id, feedback=null) {
+    let data;
+    if (!feedback && cache[id]) {
+      // already have it
+      renderSection(id);
+      return;
+    }
+    data = await fetchSection(id, feedback);
+    renderSection(data.id);
+  }
+
+  function updateNav() {
+    // index of current
+    const curIdx = SECTION_IDS.indexOf(Number(section.dataset.currentSectionId));
+    SECTION_IDS.forEach((sid, idx) => {
+      const stepEl = [stepDraft, stepFormat, stepFinalize][idx-1];
+      if (!stepEl) return;
+      if (idx <= curIdx) {
+        stepEl.classList.remove("disabled");
+        stepEl.href = ["#", "#", "#"][idx]  // keep Draft clickable
+      } else {
+        stepEl.classList.add("disabled");
+      }
+    });
+  }
+
+  // initial load of first draft
+  loadSection(initialId).catch(console.error);
 
   form.addEventListener("submit", async e => {
-    if (e.submitter && e.submitter.id === "looks-good") {
-      const curId = section.dataset.currentSectionId;
-      if (curId) recordHistory(curId, "✔ Finalized section.", true);
-      return;  // default submit → redirect
+    if (e.submitter.id === "looks-good") {
+      const cur = Number(section.dataset.currentSectionId);
+      recordHistory(cur, "✔ Finalized section.", true);
+      return; // let Django redirect to next section
     }
     e.preventDefault();
     const fb = textarea.value.trim();
     if (!fb) return;
     textarea.value = "";
-    await fetchDraft(fb).catch(err => {
-      console.error(err);
-      loader.innerHTML += `<p style="color:#c00;">❌ Retry feedback.</p>`;
-    });
+    await loadSection(Number(section.dataset.currentSectionId), fb);
   });
 });
 </script>
