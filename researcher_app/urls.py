@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     UploadPDFView, ExtractPDFView, GenerateOutlineView,
     DraftSectionView, FormatBlogView, ChatWithPDFView,
-    NormalizationRuleView
+    NormalizationRuleView,  MetaSectionView, 
 )
 from django.conf import settings
 from django.conf.urls.static import static
