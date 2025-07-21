@@ -1,4 +1,3 @@
-{# agentic_researcher/templates/blog/blog_finish.html #}
 {% extends "base.html" %}
 {% load static %}
 
@@ -46,10 +45,8 @@
   </div>
 
   <style>
-    /* Hide default footer */
     footer { display: none !important; }
 
-    /* Sidebar button styles */
     .sidebar button {
       padding: 0.6rem;
       font-size: 0.9rem;
@@ -76,14 +73,7 @@
     document.getElementById('download-pdf')
       .addEventListener('click', () => window.open('{{ pdf_url }}', '_blank'));
 
-    // Clear all the localStorage keys for this blog outline now that we're done
-    (function clearBlogCache() {
-      const outlineId = "{{ outline_id }}";
-      Object.keys(localStorage)
-        .filter(key => key.includes(outlineId))
-        .forEach(key => localStorage.removeItem(key));
-      // Optional: if you want to see this happen in the console:
-      // console.log('Cleared localStorage keys for outline', outlineId);
-    })();
+    // NOTE: automatic cache clearing has been removed so you can toggle
+    // back from step 4 and still see your cached outline, drafts, and meta.
   </script>
 {% endblock %}
