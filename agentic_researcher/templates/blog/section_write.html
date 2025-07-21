@@ -1,10 +1,10 @@
+{# agentic_researcher/templates/blog/section_write.html #}
 {% extends "base.html" %}
 {% load static %}
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/progress.css' %}">
 
-{# two-column, full-height wrapper under the 81px header #}
 <div
   style="
     position: fixed;
@@ -171,20 +171,22 @@
 {% block extra_scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const outlineId  = "{{ draft.outline.id }}";
-  const storageKey = `sectionHistory_${outlineId}`;
-  const draftId    = "{{ draft.id }}";
-  const loader     = document.getElementById("loader-section");
-  const loaderText = document.getElementById("loader-text");
-  const section    = document.getElementById("draft-section");
-  const titleEl    = document.getElementById("section-title");
-  const contentEl  = document.getElementById("section-content");
-  const historyEl  = document.getElementById("feedback-history");
-  const form       = document.getElementById("feedback-form");
-  const textarea   = document.getElementById("feedback");
+  const outlineId   = "{{ draft.outline.id }}";
+  const historyKey  = `sectionHistory_${outlineId}`;
+  const cacheKey    = `sectionCache_${"{{ draft.id }}"}`;  // per-section cache
+  const draftId     = "{{ draft.id }}";
 
-  // 1) Load only this section's history
-  let historyList = JSON.parse(localStorage.getItem(storageKey) || "[]");
+  const loader      = document.getElementById("loader-section");
+  const loaderText  = document.getElementById("loader-text");
+  const sectionEl   = document.getElementById("draft-section");
+  const titleEl     = document.getElementById("section-title");
+  const contentEl   = document.getElementById("section-content");
+  const historyEl   = document.getElementById("feedback-history");
+  const form        = document.getElementById("feedback-form");
+  const textarea    = document.getElementById("feedback");
+
+  // --- History load/store (unchanged) ---
+  let historyList = JSON.parse(localStorage.getItem(historyKey) || "[]");
   historyEl.innerHTML = "";
   historyList.forEach((entry, idx) => {
     const li = document.createElement("li");
@@ -197,11 +199,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     historyEl.appendChild(li);
   });
-
   function saveHistory() {
-    localStorage.setItem(storageKey, JSON.stringify(historyList));
+    localStorage.setItem(historyKey, JSON.stringify(historyList));
   }
-  function recordHistory(id, label, finalized=false) {
+  function recordHistory(id, label, finalized = false) {
     const entry = {
       id,
       label,
@@ -222,10 +223,25 @@ document.addEventListener("DOMContentLoaded", () => {
     historyEl.appendChild(li);
   }
 
+  // --- Try loading cached draft first ---
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) {
+    const { id, title, content } = JSON.parse(cached);
+    sectionEl.dataset.currentSectionId = id;
+    titleEl.textContent   = title;
+    contentEl.innerHTML   = content;
+    loader.style.display   = "none";
+    sectionEl.style.display = "flex";
+  } else {
+    // otherwise fetch from the LLM
+    fetchDraft();
+  }
+
+  // --- fetchDraft (and cache) ---
   async function fetchDraft(feedback = null) {
-    loader.style.display  = "flex";
-    section.style.display = "none";
-    loaderText.textContent = feedback
+    loader.style.display    = "flex";
+    sectionEl.style.display = "none";
+    loaderText.textContent  = feedback
       ? "Refining this section…"
       : "Generating section draft…";
 
@@ -240,13 +256,22 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!resp.ok) throw new Error(resp.statusText);
     const data = await resp.json();
 
-    section.dataset.currentSectionId = data.id;
+    // populate UI
+    sectionEl.dataset.currentSectionId = data.id;
     titleEl.textContent   = data.section_title;
     contentEl.innerHTML   = data.content;
 
-    loader.style.display  = "none";
-    section.style.display = "flex";
+    // **cache it**
+    localStorage.setItem(cacheKey, JSON.stringify({
+      id:      data.id,
+      title:   data.section_title,
+      content: data.content
+    }));
 
+    loader.style.display    = "none";
+    sectionEl.style.display = "flex";
+
+    // record history entry
     if (feedback) {
       recordHistory(data.id, `✏️ Refinement: "${feedback}"`);
     } else {
@@ -254,17 +279,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // initial load
-  fetchDraft().catch(err => {
-    console.error(err);
-    loader.innerHTML = `<p style="color:#c00;">❌ Could not load draft.</p>`;
-  });
-
+  // --- form handling ---
   form.addEventListener("submit", async e => {
     if (e.submitter && e.submitter.id === "looks-good") {
-      const curId = section.dataset.currentSectionId;
+      const curId = sectionEl.dataset.currentSectionId;
       if (curId) recordHistory(curId, "✔ Finalized section.", true);
-      return;  // default submit → redirect
+      return;  // let default POST redirect to the next step
     }
     e.preventDefault();
     const fb = textarea.value.trim();
