@@ -4,140 +4,44 @@
 {% block content %}
   <link rel="stylesheet" href="{% static 'css/progress.css' %}">
 
-  {# Two-column wrapper #}
-  <div
-    style="
-      position: fixed;
-      top: 81px;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      display: grid;
-      grid-template-columns: 20% 1fr;
-      overflow: hidden;
-    "
-  >
+  <div style="position:fixed; top:81px; bottom:0; left:0; right:0; display:grid; grid-template-columns:20% 1fr; overflow:hidden;">
     <!-- Sidebar: history -->
-    <aside
-      style="
-        background: #f4f4f4;
-        border-right: 1px solid #ccc;
-        padding: 1rem;
-        overflow-y: auto;
-      "
-    >
+    <aside style="background:#f4f4f4; border-right:1px solid #ccc; padding:1rem; overflow-y:auto;">
       <h3>Feedback History</h3>
-      <ul id="feedback-history" style="list-style:none; padding:0; margin:0;">
-        <li>🔄 Generating description…</li>
-      </ul>
+      <ul id="feedback-history" style="list-style:none; padding:0; margin:0;"><li>🔄 Generating description…</li></ul>
     </aside>
 
-    <!-- Main: meta inputs & form -->
-    <main
-      style="
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        padding: 1rem;
-        box-sizing: border-box;
-      "
-    >
+    <!-- Main: meta form -->
+    <main class="main-content" style="display:flex; flex-direction:column; overflow:hidden; padding:1rem; box-sizing:border-box;">
       <!-- Step tracker -->
       <div class="step-tracker" style="margin-bottom:1rem;">
-        <a
-          href="{% url 'outline_refine' outline_id=outline_id %}"
-          class="step completed"
-        >1. Outline</a>
-        <a
-          href="{% url 'section_write' outline_id=outline_id %}"
-          class="step completed"
-        >2. Draft</a>
-        <a
-          href="{% url 'blog_meta' outline_id=outline_id %}"
-          class="step active"
-        >3. Format</a>
-        <a
-          href="{% url 'blog_finish' outline_id=outline_id %}"
-          id="step-finalize"
-          class="step disabled"
-        >4. Finalize</a>
+        <a href="{% url 'outline_refine' outline_id=outline_id %}" class="step completed">1. Outline</a>
+        <a href="{% url 'section_write' outline_id=outline_id %}" class="step completed">2. Draft</a>
+        <a href="{% url 'blog_meta' outline_id=outline_id %}" class="step active">3. Format</a>
+        <a href="{% url 'blog_finish' outline_id=outline_id %}" id="step-finalize" class="step disabled">4. Finalize</a>
       </div>
 
       <!-- Loader -->
-      <div
-        id="loader-section"
-        style="
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-        "
-      >
+      <div id="loader-section" style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
         <div class="spinner"></div>
-        <p id="loader-text" style="margin-top:0.5rem; font-size:0.9rem;">
-          Generating description… Please wait.
-        </p>
+        <p id="loader-text" style="margin-top:0.5rem; font-size:0.9rem;">Generating description… Please wait.</p>
       </div>
 
-      <!-- Form -->
+      <!-- Meta form -->
       <section id="meta-section" style="display:none; flex:1; flex-direction:column;">
         <h2 style="margin:0 0 0.5rem;">Blog Metadata</h2>
         <form id="meta-form" method="post" style="flex:1; display:flex; flex-direction:column;">
           {% csrf_token %}
-          <label for="title-input"><strong>Title:</strong></label>
-          <input
-            id="title-input"
-            name="title"
-            type="text"
-            required
-            placeholder="Enter your blog title"
-            style="padding:0.5rem; margin-bottom:1rem; border:1px solid #ccc; border-radius:4px;"
-          />
-
-          <label for="author-input"><strong>Author:</strong></label>
-          <input
-            id="author-input"
-            name="author"
-            type="text"
-            required
-            placeholder="Enter author name"
-            style="padding:0.5rem; margin-bottom:1rem; border:1px solid #ccc; border-radius:4px;"
-          />
-
-          <label for="description"><strong>Description:</strong></label>
-          <textarea
-            id="description"
-            name="description"
-            rows="4"
-            readonly
-            style="padding:0.5rem; margin-bottom:0.8rem; border:1px solid #ccc; border-radius:4px;"
-          ></textarea>
-
-          <textarea
-            id="feedback"
-            rows="2"
-            placeholder="Any tweaks to description?"
-            style="padding:0.5rem; margin-bottom:0.8rem; border:1px solid #ccc; border-radius:4px;"
-          ></textarea>
-
+          <label><strong>Title:</strong></label>
+          <input id="title-input" name="title" type="text" required placeholder="Blog title" style="padding:0.5rem; margin-bottom:1rem; border:1px solid #ccc; border-radius:4px;"/>
+          <label><strong>Author:</strong></label>
+          <input id="author-input" name="author" type="text" required placeholder="Author name" style="padding:0.5rem; margin-bottom:1rem; border:1px solid #ccc; border-radius:4px;"/>
+          <label><strong>Description:</strong></label>
+          <textarea id="description" readonly rows="4" style="padding:0.5rem; margin-bottom:0.8rem; border:1px solid #ccc; border-radius:4px;"></textarea>
+          <textarea id="feedback" rows="2" placeholder="Any tweaks?" style="padding:0.5rem; margin-bottom:0.8rem; border:1px solid #ccc; border-radius:4px;"></textarea>
           <div style="margin-top:auto; display:flex; gap:0.5rem;">
-            <button
-              id="looks-good"
-              type="submit"
-              name="feedback"
-              value="OK"
-              style="background:#28a745;color:#fff;padding:0.6rem 1.2rem;border:none;border-radius:4px;cursor:pointer;"
-            >
-              Looks Good, Next
-            </button>
-            <button
-              type="button"
-              id="apply-feedback"
-              style="background:#007bff;color:#fff;padding:0.6rem 1.2rem;border:none;border-radius:4px;cursor:pointer;"
-            >
-              Apply Feedback
-            </button>
+            <button id="looks-good" type="submit" name="feedback" value="OK" style="background:#28a745;color:#fff;padding:0.6rem 1.2rem;border:none;border-radius:4px;cursor:pointer;">Looks Good, Next</button>
+            <button type="button" id="apply-feedback" style="background:#007bff;color:#fff;padding:0.6rem 1.2rem;border:none;border-radius:4px;cursor:pointer;">Apply Feedback</button>
           </div>
         </form>
       </section>
@@ -145,11 +49,11 @@
   </div>
 
   <style>
-    footer { display: none!important; }
+    footer { display:none!important; }
+    .step.disabled { pointer-events:none; opacity:0.5; }
     #feedback-history li { cursor:pointer; padding:0.2rem 0; }
     #feedback-history li:hover { text-decoration:underline; }
     #feedback-history li.finalized { color:#28a745; font-weight:bold; }
-    .step.disabled { pointer-events: none; opacity: 0.5; }
   </style>
 {% endblock %}
 
@@ -161,8 +65,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const loader       = document.getElementById("loader-section");
   const loaderText   = document.getElementById("loader-text");
   const section      = document.getElementById("meta-section");
-  const titleInput   = document.getElementById("title-input");
-  const authorInput  = document.getElementById("author-input");
   const descArea     = document.getElementById("description");
   const feedbackTA   = document.getElementById("feedback");
   const historyEl    = document.getElementById("feedback-history");
@@ -170,81 +72,64 @@ document.addEventListener("DOMContentLoaded", () => {
   const looksGoodBtn = document.getElementById("looks-good");
   const finalizeStep = document.getElementById("step-finalize");
 
-  // 1) Load history from localStorage
+  // load
   let historyStore = JSON.parse(localStorage.getItem(storageKey) || "[]");
   historyEl.innerHTML = "";
-  historyStore.forEach((snap, idx) => {
+  historyStore.forEach((snap, i) => {
     const li = document.createElement("li");
-    li.textContent   = snap.label;
-    li.dataset.idx   = idx;
+    li.textContent = snap.label;
     if (snap.finalized) li.classList.add("finalized");
-    li.addEventListener("click", () => {
-      descArea.value = historyStore[idx].desc;
-    });
+    li.addEventListener("click", () => descArea.value = snap.desc);
     historyEl.appendChild(li);
   });
 
-  function saveHistory() {
+  function save() {
     localStorage.setItem(storageKey, JSON.stringify(historyStore));
   }
-  function recordHistory(desc, label, finalized=false) {
-    const entry = { desc, label, finalized };
-    historyStore.push(entry);
-    saveHistory();
+  function record(desc, label, finalized=false) {
+    historyStore.push({desc,label,finalized});
+    save();
     const li = document.createElement("li");
-    li.textContent   = label;
-    li.dataset.idx   = historyStore.length - 1;
+    li.textContent = label;
     if (finalized) li.classList.add("finalized");
-    li.addEventListener("click", () => {
-      descArea.value = entry.desc;
-    });
+    li.addEventListener("click", () => descArea.value = desc);
     historyEl.appendChild(li);
-
-    // Unlock Finalize step
-    if (finalized) finalizeStep.classList.remove("disabled");
+    finalizeStep.classList.remove("disabled");
   }
 
-  async function fetchDescription(feedback=null) {
-    loader.style.display  = "flex";
-    section.style.display = "none";
-    loaderText.textContent = feedback
-      ? "Refining description…"
-      : "Generating description…";
-
+  async function fetchDescription(fb=null) {
+    loader.style.display  = 'flex';
+    section.style.display = 'none';
+    loaderText.textContent = fb ? 'Refining description…' : 'Generating description…';
     const resp = await fetch(`/api/meta/${outlineId}/`, {
-      method: 'POST',
-      headers: {
-        'X-CSRFToken': '{{ csrf_token }}',
-        'Content-Type': 'application/json'
+      method:'POST',
+      headers:{
+        'X-CSRFToken':'{{ csrf_token }}',
+        'Content-Type':'application/json'
       },
-      body: feedback ? JSON.stringify({ feedback }) : null
+      body: fb ? JSON.stringify({feedback:fb}) : null
     });
     if (!resp.ok) throw new Error(resp.statusText);
-    const { description } = await resp.json();
+    const {description} = await resp.json();
     descArea.value = description;
-    recordHistory(description, feedback ? `✏️ Feedback: "${feedback}"` : "✔ Description ready");
-    loader.style.display  = "none";
-    section.style.display = "flex";
+    record(description, fb ? `✏️ ${fb}` : '✔ Description ready', false);
+    loader.style.display  = 'none';
+    section.style.display = 'flex';
   }
 
-  // initial load
-  fetchDescription().catch(err => {
-    loader.innerHTML = `<p style="color:#c00;">❌ Could not load.</p>`;
-    console.error(err);
-  });
+  // initial
+  fetchDescription();
 
-  // inline feedback
-  applyBtn.addEventListener("click", async () => {
+  applyBtn.addEventListener("click", () => {
     const fb = feedbackTA.value.trim();
     if (!fb) return;
-    feedbackTA.value = "";
-    await fetchDescription(fb);
+    feedbackTA.value = '';
+    fetchDescription(fb);
   });
 
-  // on Looks Good → finalize & let form POST to view
   looksGoodBtn.addEventListener("click", () => {
-    recordHistory(descArea.value, "✔ Finalized description.", true);
-    // the form will then submit, redirecting to preview page
+    record(descArea.value, '✔ Finalized description.', true);
+    // then form submits
   });
 });
 </script>
