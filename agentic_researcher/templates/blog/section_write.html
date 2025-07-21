@@ -2,50 +2,159 @@
 {% load static %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/progress.css' %}">
+  <link rel="stylesheet" href="{% static 'css/progress.css' %}">
 
-<div class="blog-container">
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <h3>Feedback History</h3>
-    <ul id="feedback-history">
-      <li>🔄 Generating your first draft section…</li>
-    </ul>
-  </aside>
+  {# two-column, full-height wrapper under the 81px header #}
+  <div
+    style="
+      position: fixed;
+      top: 81px;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: grid;
+      grid-template-columns: 20% 1fr;
+      overflow: hidden;
+    "
+  >
+    <!-- Left: Feedback History -->
+    <aside
+      style="
+        background: #f4f4f4;
+        border-right: 1px solid #ccc;
+        padding: 1rem;
+        overflow-y: auto;
+      "
+    >
+      <h3>Feedback History</h3>
+      <ul id="feedback-history" style="list-style:none; padding:0; margin:0;">
+        <li>🔄 Generating your first draft section…</li>
+      </ul>
+    </aside>
 
-  <!-- Main Content -->
-  <main class="main-content">
-    <!-- Phase Tracker -->
-    <div class="step-tracker">
-      <div class="step completed">1. Outline</div>
-      <div class="step active">2. Draft</div>
-      <div class="step">3. Format</div>
-      <div class="step">4. Finalize</div>
-    </div>
-
-    <!-- Loader -->
-    <div id="loader-section">
-      <div class="spinner"></div>
-      <p id="loader-text">Generating section draft…</p>
-    </div>
-
-    <!-- Section Display -->
-    <section id="draft-section" style="display: none;">
-      <h2 id="section-title"></h2>
-      <div id="section-content" class="outline-list"></div>
-
-      <form id="feedback-form">
-        {% csrf_token %}
-        <label for="feedback">Any edits or suggestions?</label>
-        <textarea id="feedback" rows="3" placeholder="e.g. “Shorten intro”"></textarea>
-        <div class="button-group">
-          <button type="button" id="looks-good">Looks Good, Next</button>
-          <button type="submit">Apply Feedback</button>
+    <!-- Right: Section & Form -->
+    <main
+      class="main-content"
+      style="
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        padding: 1rem;
+        box-sizing: border-box;
+      "
+    >
+      <!-- Phase Tracker -->
+      <div class="step-tracker" style="display:flex; gap:1rem; flex:none; margin-bottom:1rem;">
+        <div class="step completed" style="flex:1; text-align:center; border-bottom:3px solid #28a745;">
+          1. Outline
         </div>
-      </form>
-    </section>
-  </main>
-</div>
+        <div class="step active" style="flex:1; text-align:center; border-bottom:3px solid #28a745; color:#28a745;">
+          2. Draft
+        </div>
+        <div class="step" style="flex:1; text-align:center; border-bottom:3px solid #ccc; color:#777;">
+          3. Format
+        </div>
+        <div class="step" style="flex:1; text-align:center; border-bottom:3px solid #ccc; color:#777;">
+          4. Finalize
+        </div>
+      </div>
+
+      <!-- Loader (until draft arrives) -->
+      <div
+        id="loader-section"
+        style="
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          overflow: hidden;
+        "
+      >
+        <div class="spinner"></div>
+        <p id="loader-text" style="margin-top:0.5rem; font-size:0.9rem;">
+          Generating section draft…
+        </p>
+      </div>
+
+      <!-- Draft + Feedback Form -->
+      <section
+        id="draft-section"
+        style="
+          display: none;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        "
+      >
+        <h2 id="section-title" style="margin:0 0 0.5rem;"></h2>
+        <div
+          id="section-content"
+          class="outline-list"
+          style="flex:1; overflow-y:auto; padding:0; margin:0 0 1rem;"
+        ></div>
+
+        <form
+          id="feedback-form"
+          method="post"
+          style="flex:none; display:flex; flex-direction:column;"
+        >
+          {% csrf_token %}
+          <textarea
+            id="feedback"
+            name="feedback"
+            rows="3"
+            placeholder="Any edits or suggestions?"
+            style="
+              padding:0.5rem;
+              font-size:0.9rem;
+              border:1px solid #ccc;
+              border-radius:4px;
+              margin-bottom:0.8rem;
+              resize:vertical;
+            "
+          ></textarea>
+          <div class="button-group" style="display:flex; gap:0.5rem;">
+            <!-- This POSTS feedback=OK → marks final & redirects server-side -->
+            <button
+              id="looks-good"
+              type="submit"
+              name="feedback"
+              value="OK"
+              style="
+                background:#28a745;
+                color:#fff;
+                padding:0.6rem 1.2rem;
+                border:none;
+                border-radius:4px;
+                cursor:pointer;
+              "
+            >
+              Looks Good, Next
+            </button>
+            <!-- This POSTS feedback=<text> but is intercepted to refine in place -->
+            <button
+              type="submit"
+              style="
+                background:#007bff;
+                color:#fff;
+                padding:0.6rem 1.2rem;
+                border:none;
+                border-radius:4px;
+                cursor:pointer;
+              "
+            >
+              Apply Feedback
+            </button>
+          </div>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  {# Hide the global footer #}
+  <style>footer { display: none !important; }</style>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -61,11 +170,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const history   = document.getElementById("feedback-history");
   const form      = document.getElementById("feedback-form");
   const textarea  = document.getElementById("feedback");
-  const looksGood = document.getElementById("looks-good");
 
-  // Call DraftSectionView API
-  async function fetchDraft(feedback=null) {
-    loader.style.display  = "block";
+  async function fetchDraft(feedback = null) {
+    loader.style.display  = "flex";
     section.style.display = "none";
     loaderText.textContent = feedback
       ? "Refining this section…"
@@ -77,20 +184,16 @@ document.addEventListener("DOMContentLoaded", () => {
         'X-CSRFToken': '{{ csrf_token }}',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ 
-        section_id: draftId,
-        feedback: feedback 
-      })
+      body: JSON.stringify({ section_id: draftId, feedback: feedback })
     });
-    if (!resp.ok) throw new Error(resp.status);
+    if (!resp.ok) throw new Error(resp.statusText);
     const data = await resp.json();
 
-    // render
     titleEl.textContent   = data.section_title;
     contentEl.innerText   = data.content;
 
     loader.style.display  = "none";
-    section.style.display = "block";
+    section.style.display = "flex";
 
     const entry = document.createElement("li");
     entry.textContent = feedback
@@ -102,27 +205,26 @@ document.addEventListener("DOMContentLoaded", () => {
   // initial load
   fetchDraft().catch(err => {
     console.error(err);
-    loader.innerHTML += `<p class="error-msg">❌ Could not load draft.</p>`;
+    loader.innerHTML = `<p style="color:#c00;">❌ Could not load draft.</p>`;
   });
 
-  // feedback submit
   form.addEventListener("submit", async e => {
+    // 1) If "Looks Good" clicked, let the form submit normally:
+    if (e.submitter && e.submitter.id === "looks-good") {
+      return;
+    }
+    // 2) Otherwise, intercept and refine in-place:
     e.preventDefault();
     const fb = textarea.value.trim();
     if (!fb) return;
     textarea.value = "";
-    history.appendChild(Object.assign(document.createElement("li"), {
-      textContent: `✏️ Feedback: ${fb}`
-    }));
+    const note = document.createElement("li");
+    note.textContent = `✏️ Feedback: ${fb}`;
+    history.appendChild(note);
     await fetchDraft(fb).catch(err => {
       console.error(err);
-      loader.innerHTML += `<p class="error-msg">❌ Retry feedback.</p>`;
+      loader.innerHTML += `<p style="color:#c00;">❌ Retry feedback.</p>`;
     });
-  });
-
-  // Looks Good → next section or meta
-  looksGood.addEventListener("click", () => {
-    window.location.href = `{% url 'section_write' outline_id=outlineId %}`;
   });
 });
 </script>
