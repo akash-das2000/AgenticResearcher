@@ -1,18 +1,296 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block content %}
-  <h1>Step 3: Blog Info</h1>
-  <form method="post">
-    {% csrf_token %}
-    <div class="form-group">
-      {{ form.title.label_tag }}<br>
-      {{ form.title }}
-    </div>
-    <div class="form-group">
-      {{ form.author_name.label_tag }}<br>
-      {{ form.author_name }}
-    </div>
-    <button type="submit" class="btn btn-primary mt-3">
-      Continue to Preview
-    </button>
-  </form>
+  <link rel="stylesheet" href="{% static 'css/progress.css' %}">
+
+  {# Two-column, full-height wrapper under the 81px header #}
+  <div
+    style="
+      position: fixed;
+      top: 81px;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: grid;
+      grid-template-columns: 20% 1fr;
+      overflow: hidden;
+    "
+  >
+    <!-- Left: Feedback History -->
+    <aside
+      style="
+        background: #f4f4f4;
+        border-right: 1px solid #ccc;
+        padding: 1rem;
+        overflow-y: auto;
+      "
+    >
+      <h3>Feedback History</h3>
+      <ul id="feedback-history" style="list-style:none; padding:0; margin:0;">
+        <li>🔄 Generating your blog metadata…</li>
+      </ul>
+    </aside>
+
+    <!-- Right: Metadata & Form -->
+    <main
+      class="main-content"
+      style="
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        padding: 1rem;
+        box-sizing: border-box;
+      "
+    >
+      <!-- Step Tracker -->
+      <div class="step-tracker" style="display:flex; gap:1rem; flex:none; margin-bottom:1rem;">
+        <div class="step completed" style="flex:1; text-align:center; border-bottom:3px solid #28a745;">
+          1. Outline
+        </div>
+        <div class="step completed" style="flex:1; text-align:center; border-bottom:3px solid #28a745;">
+          2. Draft
+        </div>
+        <div class="step active" style="flex:1; text-align:center; border-bottom:3px solid #28a745; color:#28a745;">
+          3. Format
+        </div>
+        <div class="step" style="flex:1; text-align:center; border-bottom:3px solid #ccc; color:#777;">
+          4. Finalize
+        </div>
+      </div>
+
+      <!-- Loader (until metadata arrives) -->
+      <div
+        id="loader-section"
+        style="
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          overflow: hidden;
+        "
+      >
+        <div class="spinner"></div>
+        <p id="loader-text" style="margin-top:0.5rem; font-size:0.9rem;">
+          Generating your blog metadata… Please wait.
+        </p>
+      </div>
+
+      <!-- Metadata Display + Feedback Form -->
+      <section
+        id="meta-section"
+        style="
+          display: none;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        "
+      >
+        <h2 style="margin:0 0 0.5rem;">Here’s Your Blog Metadata</h2>
+        <p style="margin:0 0 1rem; color:#555;">
+          Review the title, author, and description below, and let me know any tweaks.
+        </p>
+
+        <ul
+          id="meta-content"
+          class="outline-list"
+          style="
+            flex: 1;
+            overflow-y: auto;
+            list-style: none;
+            padding: 0;
+            margin: 0 0 1rem;
+          "
+        ></ul>
+
+        <form
+          id="meta-form"
+          method="post"
+          style="flex:none; display:flex; flex-direction:column;"
+        >
+          {% csrf_token %}
+          <textarea
+            id="feedback"
+            name="feedback"
+            rows="3"
+            placeholder="Any adjustments to the metadata?"
+            style="
+              padding:0.5rem;
+              font-size:0.9rem;
+              border:1px solid #ccc;
+              border-radius:4px;
+              margin-bottom:0.8rem;
+              resize:vertical;
+            "
+          ></textarea>
+          <div class="button-group" style="margin-top:auto; display:flex; gap:0.5rem;">
+            <!-- Finalizes & redirects to the “Finalize” step -->
+            <button
+              id="looks-good"
+              type="submit"
+              name="feedback"
+              value="OK"
+              style="
+                background:#28a745;
+                color:#fff;
+                padding:0.6rem 1.2rem;
+                border:none;
+                border-radius:4px;
+                cursor:pointer;
+              "
+            >
+              Looks Good, Next
+            </button>
+            <!-- Inline refine via AJAX -->
+            <button
+              type="submit"
+              style="
+                background:#007bff;
+                color:#fff;
+                padding:0.6rem 1.2rem;
+                border:none;
+                border-radius:4px;
+                cursor:pointer;
+              "
+            >
+              Apply Feedback
+            </button>
+          </div>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <style>
+    footer { display: none !important; }
+    /* clickable history */
+    #feedback-history li {
+      cursor: pointer;
+      padding: 0.2rem 0;
+    }
+    #feedback-history li:hover {
+      text-decoration: underline;
+    }
+    /* finalized style */
+    #feedback-history li.finalized {
+      color: #28a745;
+      font-weight: bold;
+    }
+  </style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const outlineId  = "{{ outline_id }}";
+  const storageKey = `metaHistory_${outlineId}`;
+
+  const loader     = document.getElementById("loader-section");
+  const loaderText = document.getElementById("loader-text");
+  const section    = document.getElementById("meta-section");
+  const list       = document.getElementById("meta-content");
+  const historyEl  = document.getElementById("feedback-history");
+  const form       = document.getElementById("meta-form");
+  const textarea   = document.getElementById("feedback");
+  const looksGood  = document.getElementById("looks-good");
+
+  // 1) Load this outline’s history (fresh on new upload)
+  let historyStore = JSON.parse(localStorage.getItem(storageKey) || "[]");
+  historyEl.innerHTML = "";
+  historyStore.forEach((snap, idx) => {
+    const li = document.createElement("li");
+    li.textContent   = snap.label;
+    li.dataset.index = idx;
+    if (snap.finalized) li.classList.add("finalized");
+    li.addEventListener("click", () => renderMeta(snap.data));
+    historyEl.appendChild(li);
+  });
+
+  function saveHistory() {
+    localStorage.setItem(storageKey, JSON.stringify(historyStore));
+  }
+  function recordHistory(label, data, finalized=false) {
+    const idx = historyStore.length;
+    historyStore.push({ label, data, finalized });
+    saveHistory();
+
+    const li = document.createElement("li");
+    li.textContent   = label;
+    li.dataset.index = idx;
+    if (finalized) li.classList.add("finalized");
+    li.addEventListener("click", () => renderMeta(data));
+    historyEl.appendChild(li);
+  }
+
+  function renderMeta(meta) {
+    list.innerHTML = "";
+    // assuming meta has title, author, description
+    const tpl = `
+      <li><strong>Title:</strong> ${meta.title}</li>
+      <li><strong>Author:</strong> ${meta.author}</li>
+      <li><strong>Description:</strong> ${meta.description}</li>
+    `;
+    list.innerHTML = tpl;
+  }
+
+  // 2) Fetch or refine via your metadata API
+  async function fetchMeta(feedbackText = null) {
+    loader.style.display  = "flex";
+    section.style.display = "none";
+    loaderText.textContent = feedbackText
+      ? "Refining metadata…"
+      : "Generating metadata…";
+
+    const resp = await fetch(`/api/meta/${outlineId}/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}',
+        'Content-Type': 'application/json'
+      },
+      body: feedbackText
+        ? JSON.stringify({ feedback: feedbackText })
+        : null
+    });
+    if (!resp.ok) throw new Error(resp.statusText);
+    const data = await resp.json();
+
+    renderMeta(data);
+    loader.style.display  = "none";
+    section.style.display = "flex";
+
+    if (feedbackText) {
+      recordHistory(`✏️ Applied feedback: "${feedbackText}"`, data);
+    } else {
+      recordHistory("✔ Metadata ready for review.", data);
+    }
+  }
+
+  // initial load
+  fetchMeta().catch(err => {
+    loader.innerHTML = `<p style="color:#c00;">❌ Could not load metadata.</p>`;
+    console.error(err);
+  });
+
+  // 3) Handle form
+  form.addEventListener("submit", async e => {
+    // a) “Looks Good, Next” → default POST → your view saves & redirects
+    if (e.submitter && e.submitter.id === "looks-good") {
+      const last = historyStore[historyStore.length - 1];
+      if (last) recordHistory("✔ Finalized metadata.", last.data, true);
+      return;
+    }
+    // b) “Apply Feedback” → intercept for inline refine
+    e.preventDefault();
+    const fb = textarea.value.trim();
+    if (!fb) return;
+    textarea.value = "";
+    await fetchMeta(fb).catch(err => {
+      console.error(err);
+      loader.innerHTML += `<p style="color:#c00;">❌ Retry feedback.</p>`;
+    });
+  });
+});
+</script>
 {% endblock %}
