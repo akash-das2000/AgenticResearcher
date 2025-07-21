@@ -184,18 +184,45 @@
 {% block extra_scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const outlineId = "{{ outline_id }}";
-  const loader    = document.getElementById("loader-section");
-  const loaderText= document.getElementById("loader-text");
-  const section   = document.getElementById("outline-section");
-  const list      = document.getElementById("outline-content");
-  const historyEl = document.getElementById("feedback-history");
-  const form      = document.getElementById("feedback-form");
-  const textarea  = document.getElementById("feedback");
-  const looksGood = document.getElementById("looks-good");
+  const outlineId  = "{{ outline_id }}";
+  const storageKey = `outlineHistory_${outlineId}`;
 
-  // In-memory snapshots
-  const historyStore = [];
+  const loader     = document.getElementById("loader-section");
+  const loaderText = document.getElementById("loader-text");
+  const section    = document.getElementById("outline-section");
+  const list       = document.getElementById("outline-content");
+  const historyEl  = document.getElementById("feedback-history");
+  const form       = document.getElementById("feedback-form");
+  const textarea   = document.getElementById("feedback");
+  const looksGood  = document.getElementById("looks-good");
+
+  // 1) Load only this outline's history
+  let historyStore = JSON.parse(localStorage.getItem(storageKey) || "[]");
+  historyEl.innerHTML = "";
+  historyStore.forEach((snap, idx) => {
+    const li = document.createElement("li");
+    li.textContent   = snap.label;
+    li.dataset.index = idx;
+    if (snap.finalized) li.classList.add("finalized");
+    li.addEventListener("click", () => renderOutline(historyStore[li.dataset.index].sections));
+    historyEl.appendChild(li);
+  });
+
+  function saveHistory() {
+    localStorage.setItem(storageKey, JSON.stringify(historyStore));
+  }
+  function recordHistory(label, sections, finalized=false) {
+    const idx = historyStore.length;
+    historyStore.push({ label, sections, finalized });
+    saveHistory();
+
+    const li = document.createElement("li");
+    li.textContent   = label;
+    li.dataset.index = idx;
+    if (finalized) li.classList.add("finalized");
+    li.addEventListener("click", () => renderOutline(historyStore[idx].sections));
+    historyEl.appendChild(li);
+  }
 
   function renderOutline(sections) {
     list.innerHTML = "";
@@ -210,20 +237,6 @@ document.addEventListener("DOMContentLoaded", () => {
         </p>`;
       list.appendChild(li);
     });
-  }
-
-  function recordHistory(label, sections, finalized=false) {
-    const idx = historyStore.length;
-    historyStore.push({ label, sections });
-    const li = document.createElement("li");
-    li.textContent = label;
-    li.dataset.index = idx;
-    if (finalized) li.classList.add("finalized");
-    li.addEventListener("click", () => {
-      const snap = historyStore[li.dataset.index];
-      if (snap) renderOutline(snap.sections);
-    });
-    historyEl.appendChild(li);
   }
 
   async function fetchOutline(feedbackText = null) {
@@ -251,7 +264,6 @@ document.addEventListener("DOMContentLoaded", () => {
     loader.style.display  = "none";
     section.style.display = "flex";
 
-    // log it
     if (feedbackText) {
       recordHistory(`✏️ Applied feedback: "${feedbackText}"`, data.outline_json.sections);
     } else {
@@ -260,24 +272,18 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // initial load
-  historyEl.innerHTML = "";  // clear placeholder
   fetchOutline().catch(err => {
     loader.innerHTML = `<p style="color:#c00;">❌ Something went wrong.</p>`;
     console.error(err);
   });
 
   form.addEventListener("submit", async e => {
-    // Let “Looks Good” submit normally (redirect)
     if (e.submitter && e.submitter.id === "looks-good") {
-      // record a finalized entry just before redirecting
-      const currentSnap = historyStore[historyStore.length - 1];
-      if (currentSnap) {
-        recordHistory("✔ Finalized outline.", currentSnap.sections, true);
-      }
-      return;
+      // record before redirect
+      const last = historyStore[historyStore.length - 1];
+      if (last) recordHistory("✔ Finalized outline.", last.sections, true);
+      return;  // default submit → redirect
     }
-
-    // Otherwise intercept as “Apply Feedback”
     e.preventDefault();
     const fb = textarea.value.trim();
     if (!fb) return;
