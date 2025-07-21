@@ -373,6 +373,7 @@ def section_write(request, outline_id):
       and re‐save, then reload.
     """
     outline_obj = get_object_or_404(BlogOutline, id=outline_id)
+
     # next unfinished section
     draft = (
         outline_obj.drafts
@@ -381,10 +382,11 @@ def section_write(request, outline_id):
         .first()
     )
 
+    # if all sections are done, move on
     if not draft:
-        # all sections done → collect title & author
         return redirect("blog_meta", outline_id=outline_id)
 
+    # grab the full extracted text for reference
     full_text = get_object_or_404(ExtractedContent, pdf=outline_obj.pdf).text
 
     if request.method == "POST":
@@ -393,13 +395,14 @@ def section_write(request, outline_id):
             draft.is_final = True
             draft.save()
         else:
+            # apply a refinement pass
             draft.content = writer.refine_section(
                 draft.section_title,
                 draft.content,
                 fb
             )
             draft.save()
-
+        # reload to either show next section or updated content
         return redirect("section_write", outline_id=outline_id)
 
     # First‐time GET: generate the draft if empty
@@ -407,6 +410,9 @@ def section_write(request, outline_id):
         sec_info = outline_obj.outline_json["sections"][draft.section_order]
         draft.content = writer.draft_section(sec_info, full_text)
         draft.save()
+
+    # === NEW: pull in any past tweak requests for this section ===
+    feedbacks = outline_obj.feedbacks.filter(section_order=draft.section_order)
 
     return render(request, "blog/section_write.html", {
         "draft": draft,
