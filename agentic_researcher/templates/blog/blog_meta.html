@@ -7,12 +7,25 @@
   {# Two-column wrapper #}
   <div
     style="
-      position: fixed; top:81px; bottom:0; left:0; right:0;
-      display:grid; grid-template-columns:20% 1fr; overflow:hidden;
+      position: fixed;
+      top: 81px;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: grid;
+      grid-template-columns: 20% 1fr;
+      overflow: hidden;
     "
   >
     <!-- Sidebar: history -->
-    <aside style="background:#f4f4f4; border-right:1px solid #ccc; padding:1rem; overflow-y:auto;">
+    <aside
+      style="
+        background: #f4f4f4;
+        border-right: 1px solid #ccc;
+        padding: 1rem;
+        overflow-y: auto;
+      "
+    >
       <h3>Feedback History</h3>
       <ul id="feedback-history" style="list-style:none; padding:0; margin:0;">
         <li>🔄 Generating description…</li>
@@ -20,25 +33,58 @@
     </aside>
 
     <!-- Main: meta inputs & form -->
-    <main style="display:flex; flex-direction:column; overflow:hidden; padding:1rem; box-sizing:border-box;">
+    <main
+      style="
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        padding: 1rem;
+        box-sizing: border-box;
+      "
+    >
       <!-- Step tracker -->
       <div class="step-tracker" style="display:flex; gap:1rem; margin-bottom:1rem;">
-        <div class="step completed" style="flex:1; border-bottom:3px solid #28a745; text-align:center;">
+        <a
+          href="{% url 'outline_refine' outline_id=outline_id %}"
+          class="step completed"
+          style="flex:1; text-align:center;"
+        >
           1. Outline
-        </div>
-        <div class="step completed" style="flex:1; border-bottom:3px solid #28a745; text-align:center;">
+        </a>
+        <a
+          href="{% url 'section_write' outline_id=outline_id %}"
+          class="step completed"
+          style="flex:1; text-align:center;"
+        >
           2. Draft
-        </div>
-        <div class="step active"    style="flex:1; border-bottom:3px solid #28a745; text-align:center; color:#28a745;">
+        </a>
+        <a
+          href="{% url 'blog_meta' outline_id=outline_id %}"
+          class="step active"
+          style="flex:1; text-align:center;"
+        >
           3. Format
-        </div>
-        <div class="step"           style="flex:1; border-bottom:3px solid #ccc; text-align:center; color:#777;">
+        </a>
+        <a
+          href="{% url 'blog_finish' outline_id=outline_id %}"
+          class="step"
+          style="flex:1; text-align:center;"
+        >
           4. Finalize
-        </div>
+        </a>
       </div>
 
       <!-- Loader -->
-      <div id="loader-section" style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+      <div
+        id="loader-section"
+        style="
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+        "
+      >
         <div class="spinner"></div>
         <p id="loader-text" style="margin-top:0.5rem; font-size:0.9rem;">
           Generating description… Please wait.
@@ -52,30 +98,57 @@
           {% csrf_token %}
           <!-- Title & Author are pure inputs -->
           <label for="title-input"><strong>Title:</strong></label>
-          <input id="title-input" name="title" type="text" required
-                 placeholder="Enter your blog title"
-                 style="padding:0.5rem; margin-bottom:1rem; border:1px solid #ccc; border-radius:4px;"/>
+          <input
+            id="title-input"
+            name="title"
+            type="text"
+            required
+            placeholder="Enter your blog title"
+            style="padding:0.5rem; margin-bottom:1rem; border:1px solid #ccc; border-radius:4px;"
+          />
 
           <label for="author-input"><strong>Author:</strong></label>
-          <input id="author-input" name="author" type="text" required
-                 placeholder="Enter author name"
-                 style="padding:0.5rem; margin-bottom:1rem; border:1px solid #ccc; border-radius:4px;"/>
+          <input
+            id="author-input"
+            name="author"
+            type="text"
+            required
+            placeholder="Enter author name"
+            style="padding:0.5rem; margin-bottom:1rem; border:1px solid #ccc; border-radius:4px;"
+          />
 
           <!-- Description is generated and refinable -->
           <label for="description"><strong>Description:</strong></label>
-          <textarea id="description" name="description" rows="4" readonly
-                    style="padding:0.5rem; margin-bottom:0.8rem; border:1px solid #ccc; border-radius:4px;"></textarea>
+          <textarea
+            id="description"
+            name="description"
+            rows="4"
+            readonly
+            style="padding:0.5rem; margin-bottom:0.8rem; border:1px solid #ccc; border-radius:4px;"
+          ></textarea>
 
-          <textarea id="feedback" rows="2" placeholder="Any tweaks to description?"
-                    style="padding:0.5rem; margin-bottom:0.8rem; border:1px solid #ccc; border-radius:4px;"></textarea>
+          <textarea
+            id="feedback"
+            rows="2"
+            placeholder="Any tweaks to description?"
+            style="padding:0.5rem; margin-bottom:0.8rem; border:1px solid #ccc; border-radius:4px;"
+          ></textarea>
 
           <div style="margin-top:auto; display:flex; gap:0.5rem;">
-            <button id="looks-good" type="submit" name="feedback" value="OK"
-                    style="background:#28a745;color:#fff;padding:0.6rem 1.2rem;border:none;border-radius:4px;cursor:pointer;">
+            <button
+              id="looks-good"
+              type="submit"
+              name="feedback"
+              value="OK"
+              style="background:#28a745;color:#fff;padding:0.6rem 1.2rem;border:none;border-radius:4px;cursor:pointer;"
+            >
               Looks Good, Next
             </button>
-            <button type="button" id="apply-feedback"
-                    style="background:#007bff;color:#fff;padding:0.6rem 1.2rem;border:none;border-radius:4px;cursor:pointer;">
+            <button
+              type="button"
+              id="apply-feedback"
+              style="background:#007bff;color:#fff;padding:0.6rem 1.2rem;border:none;border-radius:4px;cursor:pointer;"
+            >
               Apply Feedback
             </button>
           </div>
@@ -105,10 +178,9 @@ document.addEventListener("DOMContentLoaded", () => {
         descArea   = document.getElementById("description"),
         feedbackTA = document.getElementById("feedback"),
         historyEl  = document.getElementById("feedback-history"),
-        applyBtn   = document.getElementById("apply-feedback"),
-        looksGood  = document.getElementById("looks-good");
+        applyBtn   = document.getElementById("apply-feedback");
 
-  // load per‐outline history
+  // Load per-outline history
   let historyStore = JSON.parse(localStorage.getItem(storageKey) || "[]");
   historyEl.innerHTML = "";
   historyStore.forEach((snap, idx) => {
@@ -116,7 +188,7 @@ document.addEventListener("DOMContentLoaded", () => {
     li.textContent   = snap.label;
     li.dataset.idx   = idx;
     if (snap.finalized) li.classList.add("finalized");
-    li.addEventListener("click", () => descArea.value = historyStore[li.dataset.idx].desc);
+    li.addEventListener("click", () => descArea.value = historyStore[idx].desc);
     historyEl.appendChild(li);
   });
 
@@ -124,7 +196,7 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.setItem(storageKey, JSON.stringify(historyStore));
   }
   function recordHistory(desc, label, finalized=false) {
-    const entry = {desc, label, finalized};
+    const entry = { desc, label, finalized };
     historyStore.push(entry);
     saveHistory();
     const li = document.createElement("li");
@@ -139,6 +211,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loader.style.display = "flex";
     section.style.display= "none";
     loaderText.textContent = feedback ? "Refining description…" : "Generating description…";
+
     const resp = await fetch(`/api/meta/${outlineId}/`, {
       method: 'POST',
       headers: {'X-CSRFToken': '{{ csrf_token }}','Content-Type':'application/json'},
@@ -152,13 +225,13 @@ document.addEventListener("DOMContentLoaded", () => {
     section.style.display= "flex";
   }
 
-  // initial load
+  // Initial load
   fetchDescription().catch(err => {
     loader.innerHTML = `<p style="color:#c00;">❌ Could not load.</p>`;
     console.error(err);
   });
 
-  // apply feedback inline
+  // Apply feedback inline
   applyBtn.addEventListener("click", async () => {
     const fb = feedbackTA.value.trim();
     if (!fb) return;
@@ -166,7 +239,7 @@ document.addEventListener("DOMContentLoaded", () => {
     await fetchDescription(fb).catch(console.error);
   });
 
-  // on Looks Good, let the form POST title/author/description to your Django view
+  // On “Looks Good”, let the form POST title/author/description to your Django view
 });
 </script>
 {% endblock %}
