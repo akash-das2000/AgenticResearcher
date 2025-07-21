@@ -8,72 +8,50 @@
     <!-- Sidebar: Download Panel -->
     <aside class="sidebar">
       <h3>Download</h3>
-      <button id="download-html" style="width:100%; margin-bottom:0.5rem;">
-        Download HTML
-      </button>
-      <button id="download-pdf" style="width:100%;">
-        Download PDF
-      </button>
+      <button id="download-html">Download HTML</button>
+      <button id="download-pdf">Download PDF</button>
     </aside>
 
     <!-- Main: Final Blog + Tracker -->
     <main class="main-content">
       <!-- Step Tracker -->
       <div class="step-tracker">
-        <a href="{% url 'outline_refine' outline_id=outline_id %}" class="step completed">
-          1. Outline
-        </a>
-        <a href="{% url 'section_write' outline_id=outline_id %}" class="step completed">
-          2. Draft
-        </a>
-        <a href="{% url 'blog_meta' outline_id=outline_id %}" class="step completed">
-          3. Format
-        </a>
-        <a href="{% url 'blog_finish' outline_id=outline_id %}" class="step active">
-          4. Finalize
-        </a>
+        <a href="{% url 'outline_refine' outline_id=outline_id %}" class="step completed">1. Outline</a>
+        <a href="{% url 'section_write' outline_id=outline_id %}" class="step completed">2. Draft</a>
+        <a href="{% url 'blog_meta'    outline_id=outline_id %}" class="step completed">3. Format</a>
+        <a href="{% url 'blog_finish'  outline_id=outline_id %}" class="step active">4. Finalize</a>
       </div>
 
       <!-- Blog Content -->
-      <div
-        id="blog-content"
-        style="flex:1; overflow-y:auto; padding-right:1rem;"
-      >
+      <div id="blog-content" style="flex:1; overflow-y:auto; padding-right:1rem;">
         {{ blog_html|safe }}
       </div>
     </main>
   </div>
 
   <style>
-    /* Hide default footer */
-    footer { display: none !important; }
-
-    /* Sidebar button styles (optional tweaks) */
+    footer { display:none!important; }
     .sidebar button {
-      padding: 0.6rem;
-      font-size: 0.9rem;
-      font-weight: bold;
+      width:100%;
+      padding:0.6rem;
+      font-size:0.9rem;
+      font-weight:bold;
+      color:#fff;
       border:none;
       border-radius:4px;
       cursor:pointer;
-      color: #fff;
-      background: #007bff;
-      transition: opacity 0.2s;
+      background:#007bff;
+      margin-bottom:0.5rem;
+      transition:opacity 0.2s;
     }
-    .sidebar button#download-pdf {
-      background: #6c757d;
-    }
-    .sidebar button:hover {
-      opacity: 0.9;
-    }
+    .sidebar button#download-pdf { background:#6c757d; }
+    .sidebar button:hover { opacity:0.9; }
   </style>
 
   <script>
-    // When you click “Download HTML”, open the saved HTML file in a new tab
     document.getElementById('download-html').addEventListener('click', () => {
       window.open('{{ html_url }}', '_blank');
     });
-    // Similarly for PDF
     document.getElementById('download-pdf').addEventListener('click', () => {
       window.open('{{ pdf_url }}', '_blank');
     });
