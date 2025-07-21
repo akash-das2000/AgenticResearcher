@@ -78,7 +78,6 @@
       </div>
 
       <!-- Outline + Feedback Form -->
-      <!-- NOTE: method="post" and the Looks Good button now submits feedback=OK -->
       <section
         id="outline-section"
         style="
@@ -127,7 +126,7 @@
             "
           ></textarea>
           <div class="button-group" style="margin-top:auto; display:flex; gap:0.5rem;">
-            <!-- This POSTs feedback=OK → seeds drafts & redirects server-side -->
+            <!-- Finalizes & redirects -->
             <button
               id="looks-good"
               type="submit"
@@ -144,10 +143,9 @@
             >
               Looks Good, Next
             </button>
-            <!-- This POSTs feedback=<user text> → refines outline in place -->
+            <!-- Inline refine -->
             <button
               type="submit"
-              value="apply"
               style="
                 background:#007bff;
                 color:#fff;
@@ -165,8 +163,22 @@
     </main>
   </div>
 
-  {# Hide the global footer #}
-  <style>footer { display: none !important; }</style>
+  <style>
+    footer { display: none !important; }
+    /* clickable history */
+    #feedback-history li {
+      cursor: pointer;
+      padding: 0.2rem 0;
+    }
+    #feedback-history li:hover {
+      text-decoration: underline;
+    }
+    /* finalized style */
+    #feedback-history li.finalized {
+      color: #28a745;
+      font-weight: bold;
+    }
+  </style>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -177,10 +189,42 @@ document.addEventListener("DOMContentLoaded", () => {
   const loaderText= document.getElementById("loader-text");
   const section   = document.getElementById("outline-section");
   const list      = document.getElementById("outline-content");
-  const history   = document.getElementById("feedback-history");
+  const historyEl = document.getElementById("feedback-history");
   const form      = document.getElementById("feedback-form");
   const textarea  = document.getElementById("feedback");
   const looksGood = document.getElementById("looks-good");
+
+  // In-memory snapshots
+  const historyStore = [];
+
+  function renderOutline(sections) {
+    list.innerHTML = "";
+    sections.forEach(sec => {
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <h3 style="margin:0 0 0.5rem; font-size:1rem; font-weight:600;">
+          ${sec.title}
+        </h3>
+        <p style="margin:0 0 0.8rem; font-size:0.9rem; line-height:1.4;">
+          ${sec.description}
+        </p>`;
+      list.appendChild(li);
+    });
+  }
+
+  function recordHistory(label, sections, finalized=false) {
+    const idx = historyStore.length;
+    historyStore.push({ label, sections });
+    const li = document.createElement("li");
+    li.textContent = label;
+    li.dataset.index = idx;
+    if (finalized) li.classList.add("finalized");
+    li.addEventListener("click", () => {
+      const snap = historyStore[li.dataset.index];
+      if (snap) renderOutline(snap.sections);
+    });
+    historyEl.appendChild(li);
+  }
 
   async function fetchOutline(feedbackText = null) {
     loader.style.display  = "flex";
@@ -202,51 +246,42 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!resp.ok) throw new Error(resp.statusText);
     const data = await resp.json();
 
-    list.innerHTML = "";
-    (data.outline_json.sections || []).forEach(sec => {
-      const li = document.createElement("li");
-      li.innerHTML = `
-        <h3 style="margin:0 0 0.5rem; font-size:1rem; font-weight:600;">
-          ${sec.title}
-        </h3>
-        <p style="margin:0 0 0.8rem; font-size:0.9rem; line-height:1.4;">
-          ${sec.description}
-        </p>`;
-      list.appendChild(li);
-    });
+    renderOutline(data.outline_json.sections);
 
     loader.style.display  = "none";
     section.style.display = "flex";
 
-    const entry = document.createElement("li");
-    entry.textContent = feedbackText
-      ? `✔ Applied feedback: "${feedbackText}"`
-      : "✔ Outline ready for review.";
-    history.appendChild(entry);
+    // log it
+    if (feedbackText) {
+      recordHistory(`✏️ Applied feedback: "${feedbackText}"`, data.outline_json.sections);
+    } else {
+      recordHistory("✔ Outline ready for review.", data.outline_json.sections);
+    }
   }
 
   // initial load
+  historyEl.innerHTML = "";  // clear placeholder
   fetchOutline().catch(err => {
     loader.innerHTML = `<p style="color:#c00;">❌ Something went wrong.</p>`;
     console.error(err);
   });
 
-  // single submit listener handles both buttons:
   form.addEventListener("submit", async e => {
-    // 1) If "Looks Good, Next" was clicked, let the form submit normally:
+    // Let “Looks Good” submit normally (redirect)
     if (e.submitter && e.submitter.id === "looks-good") {
-      // do nothing here → default POST to /blog/outline/<id>/ with feedback=OK
+      // record a finalized entry just before redirecting
+      const currentSnap = historyStore[historyStore.length - 1];
+      if (currentSnap) {
+        recordHistory("✔ Finalized outline.", currentSnap.sections, true);
+      }
       return;
     }
 
-    // 2) Otherwise, it's "Apply Feedback": intercept, refine in-place
+    // Otherwise intercept as “Apply Feedback”
     e.preventDefault();
     const fb = textarea.value.trim();
     if (!fb) return;
     textarea.value = "";
-    const note = document.createElement("li");
-    note.textContent = `✏️ Feedback: ${fb}`;
-    history.appendChild(note);
     await fetchOutline(fb).catch(err => {
       console.error(err);
       loader.innerHTML += `<p style="color:#c00;">❌ Retry feedback.</p>`;
@@ -255,4 +290,3 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 {% endblock %}
-
