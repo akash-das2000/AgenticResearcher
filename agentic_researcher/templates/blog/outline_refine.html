@@ -1,10 +1,10 @@
+{# agentic_researcher/templates/blog/outline_refine.html #}
 {% extends "base.html" %}
 {% load static %}
 
 {% block content %}
   <link rel="stylesheet" href="{% static 'css/progress.css' %}">
 
-  {# two-column, full-height wrapper under the 81px header #}
   <div
     style="
       position: fixed;
@@ -126,7 +126,6 @@
             "
           ></textarea>
           <div class="button-group" style="margin-top:auto; display:flex; gap:0.5rem;">
-            <!-- Finalizes & redirects -->
             <button
               id="looks-good"
               type="submit"
@@ -143,7 +142,6 @@
             >
               Looks Good, Next
             </button>
-            <!-- Inline refine -->
             <button
               type="submit"
               style="
@@ -184,19 +182,20 @@
 {% block extra_scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const outlineId  = "{{ outline_id }}";
-  const storageKey = `outlineHistory_${outlineId}`;
+  const outlineId   = "{{ outline_id }}";
+  const historyKey  = `outlineHistory_${outlineId}`;
+  const cacheKey    = `outlineCache_${outlineId}`;
 
-  const loader     = document.getElementById("loader-section");
-  const loaderText = document.getElementById("loader-text");
-  const section    = document.getElementById("outline-section");
-  const list       = document.getElementById("outline-content");
-  const historyEl  = document.getElementById("feedback-history");
-  const form       = document.getElementById("feedback-form");
-  const textarea   = document.getElementById("feedback");
+  const loader      = document.getElementById("loader-section");
+  const loaderText  = document.getElementById("loader-text");
+  const section     = document.getElementById("outline-section");
+  const list        = document.getElementById("outline-content");
+  const historyEl   = document.getElementById("feedback-history");
+  const form        = document.getElementById("feedback-form");
+  const textarea    = document.getElementById("feedback");
 
-  // 1) Load only this outline's history
-  let historyStore = JSON.parse(localStorage.getItem(storageKey) || "[]");
+  // Load existing feedback history
+  let historyStore = JSON.parse(localStorage.getItem(historyKey) || "[]");
   historyEl.innerHTML = "";
   historyStore.forEach((snap, idx) => {
     const li = document.createElement("li");
@@ -208,13 +207,12 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   function saveHistory() {
-    localStorage.setItem(storageKey, JSON.stringify(historyStore));
+    localStorage.setItem(historyKey, JSON.stringify(historyStore));
   }
-  function recordHistory(label, sections, finalized=false) {
+  function recordHistory(label, sections, finalized = false) {
     const idx = historyStore.length;
     historyStore.push({ label, sections, finalized });
     saveHistory();
-
     const li = document.createElement("li");
     li.textContent   = label;
     li.dataset.index = idx;
@@ -238,6 +236,21 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Try loading a cached outline first
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) {
+    const { sections } = JSON.parse(cached);
+    renderOutline(sections);
+    loader.style.display  = "none";
+    section.style.display = "flex";
+  } else {
+    // otherwise generate from the API
+    fetchOutline().catch(err => {
+      loader.innerHTML = `<p style="color:#c00;">❌ Something went wrong.</p>`;
+      console.error(err);
+    });
+  }
+
   async function fetchOutline(feedbackText = null) {
     loader.style.display  = "flex";
     section.style.display = "none";
@@ -258,7 +271,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!resp.ok) throw new Error(resp.statusText);
     const data = await resp.json();
 
+    // Render and cache the latest
     renderOutline(data.outline_json.sections);
+    localStorage.setItem(cacheKey,
+      JSON.stringify({ sections: data.outline_json.sections })
+    );
 
     loader.style.display  = "none";
     section.style.display = "flex";
@@ -270,18 +287,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // initial load
-  fetchOutline().catch(err => {
-    loader.innerHTML = `<p style="color:#c00;">❌ Something went wrong.</p>`;
-    console.error(err);
-  });
-
   form.addEventListener("submit", async e => {
     if (e.submitter && e.submitter.id === "looks-good") {
-      // record before redirect
+      // mark final and let Django redirect to next step
       const last = historyStore[historyStore.length - 1];
       if (last) recordHistory("✔ Finalized outline.", last.sections, true);
-      return;  // default submit → redirect
+      return;
     }
     e.preventDefault();
     const fb = textarea.value.trim();
