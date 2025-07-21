@@ -492,6 +492,7 @@ def blog_meta(request, outline_id):
 
 
 def blog_finish(request, outline_id):
+    # 1) Fetch outline & all its section drafts
     outline = get_object_or_404(BlogOutline, id=outline_id)
     drafts = outline.drafts.order_by("section_order")
     sections = [
@@ -499,30 +500,30 @@ def blog_finish(request, outline_id):
         for d in drafts
     ]
 
-    # Assemble HTML string
+    # 2) Assemble the full blog HTML
     html_content = formatter.assemble_html(
         sections,
         blog_title=outline.title or "Untitled Blog",
         author=(request.user.username if request.user.is_authenticated else "Anonymous")
     )
 
-    # Save to disk and get file paths
+    # 3) Save out HTML & PDF to MEDIA_ROOT
     files = formatter.save_html_and_pdf(
         html_content,
         filename=f"blog_{outline.id}"
     )
     # files == {'html_path': '/app/media/blog_5.html', 'pdf_path': '/app/media/blog_5.pdf'}
 
-    # Convert file paths to URLs under MEDIA_URL
-    from django.conf import settings
-    import os
+    # 4) Build public URLs (if you need them elsewhere)
     html_url = settings.MEDIA_URL + os.path.basename(files['html_path'])
     pdf_url  = settings.MEDIA_URL + os.path.basename(files['pdf_path'])
 
+    # 5) Render final template with everything it needs
     return render(request, "blog/blog_finish.html", {
-        "preview_url":  reverse('blog_preview', args=[outline_id]),
-        "html_url":     html_url,
-        "pdf_url":      pdf_url,
+        "outline_id": outline_id,     # for your {% url 'blog_preview' outline_id=outline_id %}
+        "blog_html":  html_content,   # the full, scrollable blog
+        "html_url":   html_url,       # (optional) direct HTML download link
+        "pdf_url":    pdf_url,        # (optional) direct PDF download link
     })
 
 def blog_preview(request, outline_id):
