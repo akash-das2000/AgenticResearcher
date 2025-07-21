@@ -42,7 +42,8 @@ body {
   flex: none;
   margin-bottom: 1rem;
 }
-.step {
+/* Make sure any <div> or <a> with class="step" gets the same look */
+.step-tracker .step {
   flex: 1;
   text-align: center;
   padding: 0.4rem;
@@ -50,12 +51,14 @@ body {
   font-weight: bold;
   color: #777;
   border-bottom: 3px solid #ccc;
+  text-decoration: none;   /* for <a> steps */
+  cursor: pointer;         /* indicates clickable */
 }
-.step.completed {
+.step-tracker .step.completed {
   color: #28a745;
   border-color: #28a745;
 }
-.step.active {
+.step-tracker .step.active {
   color: #007bff;
   border-color: #007bff;
 }
@@ -163,7 +166,7 @@ textarea {
   margin-top: 0.5rem;
 }
 
-/* ─── Hide the global footer on this page ─── */
+/* ─── Hide the global footer on these pages ─── */
 footer {
   display: none !important;
 }
