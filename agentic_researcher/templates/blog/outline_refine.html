@@ -4,106 +4,42 @@
 {% block content %}
   <link rel="stylesheet" href="{% static 'css/progress.css' %}">
 
-  {# two-column, full-height wrapper under the 81px header #}
-  <div
-    style="
-      position: fixed;
-      top: 81px;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      display: grid;
-      grid-template-columns: 20% 1fr;
-      overflow: hidden;
-    "
-  >
-    <!-- Left: Feedback History -->
-    <aside
-      style="
-        background: #f4f4f4;
-        border-right: 1px solid #ccc;
-        padding: 1rem;
-        overflow-y: auto;
-      "
-    >
+  <div style="position:fixed; top:81px; bottom:0; left:0; right:0; display:grid; grid-template-columns:20% 1fr; overflow:hidden;">
+    <!-- Sidebar: Feedback History -->
+    <aside style="background:#f4f4f4; border-right:1px solid #ccc; padding:1rem; overflow-y:auto;">
       <h3>Feedback History</h3>
       <ul id="feedback-history" style="list-style:none; padding:0; margin:0;">
         <li>🔄 Generating your blog outline…</li>
       </ul>
     </aside>
 
-    <!-- Right: Outline & Form -->
-    <main
-      class="main-content"
-      style="
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        padding: 1rem;
-        box-sizing: border-box;
-      "
-    >
+    <!-- Main: Outline & Form -->
+    <main class="main-content" style="display:flex; flex-direction:column; overflow:hidden; padding:1rem; box-sizing:border-box;">
       <!-- Step Tracker -->
       <div class="step-tracker" style="margin-bottom:1rem;">
-        <a href="{% url 'outline_refine' outline_id=outline_id %}" class="step active">
-          1. Outline
-        </a>
-        <a href="{% url 'section_write' outline_id=outline_id %}" class="step disabled">
-          2. Draft
-        </a>
-        <a href="{% url 'blog_meta' outline_id=outline_id %}" class="step disabled">
-          3. Format
-        </a>
-        <a href="{% url 'blog_finish' outline_id=outline_id %}" class="step disabled">
-          4. Finalize
-        </a>
+        <a href="{% url 'outline_refine' outline_id=outline_id %}" class="step active">1. Outline</a>
+        <a href="{% url 'section_write' outline_id=outline_id %}" class="step disabled">2. Draft</a>
+        <a href="{% url 'blog_meta'    outline_id=outline_id %}" class="step disabled">3. Format</a>
+        <a href="{% url 'blog_finish'  outline_id=outline_id %}" class="step disabled">4. Finalize</a>
       </div>
 
-      <!-- Loader (until outline arrives) -->
-      <div
-        id="loader-section"
-        style="
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          overflow: hidden;
-        "
-      >
+      <!-- Loader -->
+      <div id="loader-section" style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; overflow:hidden;">
         <div class="spinner"></div>
-        <p id="loader-text" style="margin-top:0.5rem; font-size:0.9rem;">
-          Generating your outline… Please wait.
-        </p>
+        <p id="loader-text" style="margin-top:0.5rem; font-size:0.9rem;">Generating your outline… Please wait.</p>
       </div>
 
-      <!-- Outline + Feedback Form -->
-      <section
-        id="outline-section"
-        style="display: none; flex: 1; flex-direction: column; overflow: hidden;"
-      >
+      <!-- Outline + Feedback -->
+      <section id="outline-section" style="display:none; flex:1; flex-direction:column; overflow:hidden;">
         <h2 style="margin:0 0 0.5rem;">Here’s Your Blog Outline</h2>
-        <p style="margin:0 0 1rem; color:#555;">
-          Review the structure below and let me know any tweaks.
-        </p>
-
+        <p style="margin:0 0 1rem; color:#555;">Review the structure below and let me know any tweaks.</p>
         <ul id="outline-content" class="outline-list"></ul>
-
         <form id="feedback-form" method="post" style="display:flex; flex-direction:column;">
           {% csrf_token %}
-          <textarea
-            id="feedback"
-            name="feedback"
-            rows="3"
-            placeholder="Any adjustments or notes?"
-          ></textarea>
+          <textarea id="feedback" name="feedback" rows="3" placeholder="Any adjustments or notes?"></textarea>
           <div class="button-group">
-            <button id="looks-good" type="submit" name="feedback" value="OK">
-              Looks Good, Next
-            </button>
-            <button type="submit">
-              Apply Feedback
-            </button>
+            <button id="looks-good" type="submit" name="feedback" value="OK">Looks Good, Next</button>
+            <button type="submit">Apply Feedback</button>
           </div>
         </form>
       </section>
@@ -111,28 +47,11 @@
   </div>
 
   <style>
-    footer { display:none !important; }
-
-    /* Disable forward steps */
-    .step.disabled {
-      pointer-events: none;
-      opacity: 0.5;
-    }
-
-    /* History list styling */
-    #feedback-history li {
-      cursor: pointer;
-      padding: 0.2rem 0;
-    }
-    #feedback-history li:hover {
-      text-decoration: underline;
-    }
-    #feedback-history li.finalized {
-      color: #28a745;
-      font-weight: bold;
-    }
-
-    /* Textarea & buttons rely on your existing progress.css */
+    footer { display:none!important; }
+    .step.disabled { pointer-events:none; opacity:0.5; }
+    #feedback-history li { cursor:pointer; padding:0.2rem 0; }
+    #feedback-history li:hover { text-decoration:underline; }
+    #feedback-history li.finalized { color:#28a745; font-weight:bold; }
   </style>
 {% endblock %}
 
@@ -141,7 +60,6 @@
 document.addEventListener("DOMContentLoaded", () => {
   const outlineId  = "{{ outline_id }}";
   const storageKey = `outlineCache_${outlineId}`;
-
   const loader     = document.getElementById("loader-section");
   const loaderText = document.getElementById("loader-text");
   const section    = document.getElementById("outline-section");
@@ -149,96 +67,74 @@ document.addEventListener("DOMContentLoaded", () => {
   const historyEl  = document.getElementById("feedback-history");
   const form       = document.getElementById("feedback-form");
   const textarea   = document.getElementById("feedback");
+  const draftLink  = document.querySelector('.step-tracker a[href*="section"]');
 
-  // Load cache of outline snapshots, or start empty
+  // load cache
   let cache = JSON.parse(localStorage.getItem(storageKey) || "[]");
   historyEl.innerHTML = "";
-  cache.forEach((snap, idx) => {
+  cache.forEach((snap, i) => {
     const li = document.createElement("li");
-    li.textContent = snap.label;
+    li.textContent   = snap.label;
     if (snap.finalized) li.classList.add("finalized");
-    li.addEventListener("click", () => renderSections(snap.sections));
+    li.addEventListener("click", () => render(snap.sections));
     historyEl.appendChild(li);
   });
 
-  function saveCache() {
+  function save() {
     localStorage.setItem(storageKey, JSON.stringify(cache));
   }
-
-  function recordHistory(label, sections, finalized=false) {
-    const snap = { label, sections, finalized };
-    cache.push(snap);
-    saveCache();
+  function record(label, sections, finalized=false) {
+    cache.push({label, sections, finalized});
+    save();
     const li = document.createElement("li");
     li.textContent = label;
     if (finalized) li.classList.add("finalized");
-    li.addEventListener("click", () => renderSections(sections));
+    li.addEventListener("click", () => render(sections));
     historyEl.appendChild(li);
-
-    // Once finalized, unlock step 2
-    if (finalized) {
-      document.querySelector('.step-tracker a.step.disabled').classList.remove('disabled');
-    }
+    if (finalized) draftLink.classList.remove("disabled");
   }
-
-  function renderSections(sections) {
+  function render(sections) {
     list.innerHTML = "";
     sections.forEach(sec => {
       const li = document.createElement("li");
-      li.innerHTML = `
-        <h3 class="outline-title">${sec.title}</h3>
-        <p class="outline-desc">${sec.description}</p>
-      `;
+      li.innerHTML = `<h3 class="outline-title">${sec.title}</h3><p class="outline-desc">${sec.description}</p>`;
       list.appendChild(li);
     });
+    loader.style.display  = 'none';
+    section.style.display = 'flex';
   }
 
   async function fetchOutline(feedback=null) {
-    loader.style.display  = "flex";
-    section.style.display = "none";
-    loaderText.textContent = feedback
-      ? "Refining your outline…"
-      : "Generating your outline…";
-
+    loader.style.display  = 'flex';
+    section.style.display = 'none';
+    loaderText.textContent = feedback ? 'Refining your outline…' : 'Generating your outline…';
     const resp = await fetch(`/api/outline/${outlineId}/`, {
-      method: 'POST',
+      method:'POST',
       headers: {
-        'X-CSRFToken': '{{ csrf_token }}',
-        'Content-Type': 'application/json'
+        'X-CSRFToken':'{{ csrf_token }}',
+        'Content-Type':'application/json'
       },
-      body: feedback ? JSON.stringify({ feedback }) : null
+      body: feedback ? JSON.stringify({feedback}) : null
     });
-    if (!resp.ok) {
-      loader.innerHTML = `<p style="color:#c00;">❌ Something went wrong.</p>`;
-      return;
-    }
+    if (!resp.ok) throw new Error(resp.statusText);
     const data = await resp.json();
-
-    renderSections(data.outline_json.sections);
-    loader.style.display  = "none";
-    section.style.display = "flex";
-
-    if (feedback) {
-      recordHistory(`✏️ Applied feedback: "${feedback}"`, data.outline_json.sections);
-    } else {
-      recordHistory("✔ Outline ready for review.", data.outline_json.sections);
-    }
+    render(data.outline_json.sections);
+    if (feedback) record(`✏️ ${feedback}`, data.outline_json.sections);
+    else         record('✔ Outline ready for review.', data.outline_json.sections);
   }
 
   // initial load
   fetchOutline();
 
   form.addEventListener("submit", e => {
-    if (e.submitter.id === "looks-good") {
-      // mark finalized & unlock Draft step
-      const last = cache[cache.length - 1];
-      if (last) recordHistory("✔ Finalized outline.", last.sections, true);
-      return; // will redirect to Draft page
+    if (e.submitter.id==='looks-good') {
+      record('✔ Finalized outline.', cache[cache.length-1].sections, true);
+      return; // redirect to draft
     }
     e.preventDefault();
     const fb = textarea.value.trim();
     if (!fb) return;
-    textarea.value = "";
+    textarea.value = '';
     fetchOutline(fb);
   });
 });
