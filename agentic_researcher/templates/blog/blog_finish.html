@@ -31,27 +31,11 @@
       <h3>Download</h3>
       <a
         href="{% url 'blog_preview' outline_id=outline_id %}?download=html"
-        style="
-          display: block;
-          text-align:center;
-          background:#007bff;
-          color:#fff;
-          padding:0.6rem;
-          border-radius:4px;
-          text-decoration:none;
-        "
+        style="display:block; text-align:center; background:#007bff; color:#fff; padding:0.6rem; border-radius:4px; text-decoration:none;"
       >Download HTML</a>
       <a
         href="{% url 'blog_preview' outline_id=outline_id %}?download=pdf"
-        style="
-          display: block;
-          text-align:center;
-          background:#6c757d;
-          color:#fff;
-          padding:0.6rem;
-          border-radius:4px;
-          text-decoration:none;
-        "
+        style="display:block; text-align:center; background:#6c757d; color:#fff; padding:0.6rem; border-radius:4px; text-decoration:none;"
       >Download PDF</a>
     </aside>
 
@@ -68,18 +52,34 @@
     >
       <!-- Step Tracker -->
       <div class="step-tracker" style="display:flex; gap:1rem; margin-bottom:1rem; flex:none;">
-        <div class="step completed" style="flex:1; text-align:center; border-bottom:3px solid #28a745;">
+        <a
+          href="{% url 'outline_refine' outline_id=outline_id %}"
+          class="step completed"
+          style="flex:1; text-align:center;"
+        >
           1. Outline
-        </div>
-        <div class="step completed" style="flex:1; text-align:center; border-bottom:3px solid #28a745;">
+        </a>
+        <a
+          href="{% url 'section_write' outline_id=outline_id %}"
+          class="step completed"
+          style="flex:1; text-align:center;"
+        >
           2. Draft
-        </div>
-        <div class="step completed" style="flex:1; text-align:center; border-bottom:3px solid #28a745;">
+        </a>
+        <a
+          href="{% url 'blog_meta' outline_id=outline_id %}"
+          class="step completed"
+          style="flex:1; text-align:center;"
+        >
           3. Format
-        </div>
-        <div class="step active" style="flex:1; text-align:center; border-bottom:3px solid #28a745; color:#28a745;">
+        </a>
+        <a
+          href="{% url 'blog_finish' outline_id=outline_id %}"
+          class="step active"
+          style="flex:1; text-align:center;"
+        >
           4. Finalize
-        </div>
+        </a>
       </div>
 
       <!-- Blog Content -->
