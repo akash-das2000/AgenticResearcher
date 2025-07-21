@@ -4,80 +4,32 @@
 {% block content %}
   <link rel="stylesheet" href="{% static 'css/progress.css' %}">
 
-  {# Two-column, full-height wrapper under the 81px header #}
-  <div
-    style="
-      position: fixed;
-      top: 81px;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      display: grid;
-      grid-template-columns: 20% 1fr;
-      overflow: hidden;
-    "
-  >
-    <!-- Left: Download Panel -->
-    <aside
-      style="
-        background: #f4f4f4;
-        border-right: 1px solid #ccc;
-        padding: 1rem;
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-      "
-    >
+  <div class="blog-container">
+    <!-- Sidebar: Download Panel -->
+    <aside class="sidebar">
       <h3>Download</h3>
-      <a
-        href="{% url 'blog_preview' outline_id=outline_id %}?download=html"
-        style="display:block; text-align:center; background:#007bff; color:#fff; padding:0.6rem; border-radius:4px; text-decoration:none;"
-      >Download HTML</a>
-      <a
-        href="{% url 'blog_preview' outline_id=outline_id %}?download=pdf"
-        style="display:block; text-align:center; background:#6c757d; color:#fff; padding:0.6rem; border-radius:4px; text-decoration:none;"
-      >Download PDF</a>
+      <button id="download-html" style="width:100%; margin-bottom:0.5rem;">
+        Download HTML
+      </button>
+      <button id="download-pdf" style="width:100%;">
+        Download PDF
+      </button>
     </aside>
 
-    <!-- Right: Final Blog -->
-    <main
-      class="main-content"
-      style="
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        padding: 1rem;
-        box-sizing: border-box;
-      "
-    >
+    <!-- Main: Final Blog + Tracker -->
+    <main class="main-content">
       <!-- Step Tracker -->
-      <div class="step-tracker" style="display:flex; gap:1rem; margin-bottom:1rem; flex:none;">
-        <a
-          href="{% url 'outline_refine' outline_id=outline_id %}"
-          class="step completed"
-          style="flex:1; text-align:center;"
-        >
+      <div class="step-tracker">
+        <a href="{% url 'outline_refine' outline_id=outline_id %}" class="step completed">
           1. Outline
         </a>
-        <a
-          href="{% url 'section_write' outline_id=outline_id %}"
-          class="step completed"
-          style="flex:1; text-align:center;"
-        >
+        <a href="{% url 'section_write' outline_id=outline_id %}" class="step completed">
           2. Draft
         </a>
-        <a
-          href="{% url 'blog_meta' outline_id=outline_id %}"
-          class="step completed"
-          style="flex:1; text-align:center;"
-        >
+        <a href="{% url 'blog_meta' outline_id=outline_id %}" class="step completed">
           3. Format
         </a>
-        <a
-          href="{% url 'blog_finish' outline_id=outline_id %}"
-          class="step active"
-          style="flex:1; text-align:center;"
-        >
+        <a href="{% url 'blog_finish' outline_id=outline_id %}" class="step active">
           4. Finalize
         </a>
       </div>
@@ -85,11 +37,7 @@
       <!-- Blog Content -->
       <div
         id="blog-content"
-        style="
-          flex:1;
-          overflow-y:auto;
-          padding-right: 1rem;
-        "
+        style="flex:1; overflow-y:auto; padding-right:1rem;"
       >
         {{ blog_html|safe }}
       </div>
@@ -97,6 +45,37 @@
   </div>
 
   <style>
+    /* Hide default footer */
     footer { display: none !important; }
+
+    /* Sidebar button styles (optional tweaks) */
+    .sidebar button {
+      padding: 0.6rem;
+      font-size: 0.9rem;
+      font-weight: bold;
+      border:none;
+      border-radius:4px;
+      cursor:pointer;
+      color: #fff;
+      background: #007bff;
+      transition: opacity 0.2s;
+    }
+    .sidebar button#download-pdf {
+      background: #6c757d;
+    }
+    .sidebar button:hover {
+      opacity: 0.9;
+    }
   </style>
+
+  <script>
+    // When you click “Download HTML”, open the saved HTML file in a new tab
+    document.getElementById('download-html').addEventListener('click', () => {
+      window.open('{{ html_url }}', '_blank');
+    });
+    // Similarly for PDF
+    document.getElementById('download-pdf').addEventListener('click', () => {
+      window.open('{{ pdf_url }}', '_blank');
+    });
+  </script>
 {% endblock %}
