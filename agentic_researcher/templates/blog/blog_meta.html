@@ -1,10 +1,10 @@
+{# agentic_researcher/templates/blog/blog_meta.html #}
 {% extends "base.html" %}
 {% load static %}
 
 {% block content %}
   <link rel="stylesheet" href="{% static 'css/progress.css' %}">
 
-  {# Two-column wrapper #}
   <div
     style="
       position: fixed;
@@ -92,7 +92,10 @@
       </div>
 
       <!-- Form -->
-      <section id="meta-section" style="display:none; flex:1; flex-direction:column;">
+      <section
+        id="meta-section"
+        style="display:none; flex:1; display:flex; flex-direction:column;"
+      >
         <h2 style="margin:0 0 0.5rem;">Blog Metadata</h2>
         <form id="meta-form" method="post" style="flex:1; display:flex; flex-direction:column;">
           {% csrf_token %}
@@ -168,20 +171,23 @@
 {% block extra_scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const outlineId  = "{{ outline_id }}",
-        storageKey = `metaDescHistory_${outlineId}`,
-        loader     = document.getElementById("loader-section"),
-        loaderText = document.getElementById("loader-text"),
-        section    = document.getElementById("meta-section"),
-        titleInput = document.getElementById("title-input"),
-        authorInput= document.getElementById("author-input"),
-        descArea   = document.getElementById("description"),
-        feedbackTA = document.getElementById("feedback"),
-        historyEl  = document.getElementById("feedback-history"),
-        applyBtn   = document.getElementById("apply-feedback");
+  const outlineId   = "{{ outline_id }}";
+  const historyKey  = `metaDescHistory_${outlineId}`;
+  const cacheKey    = `metaCache_${outlineId}`;
 
-  // Load per-outline history
-  let historyStore = JSON.parse(localStorage.getItem(storageKey) || "[]");
+  const loader      = document.getElementById("loader-section");
+  const loaderText  = document.getElementById("loader-text");
+  const section     = document.getElementById("meta-section");
+
+  const titleInput  = document.getElementById("title-input");
+  const authorInput = document.getElementById("author-input");
+  const descArea    = document.getElementById("description");
+  const feedbackTA  = document.getElementById("feedback");
+  const historyEl   = document.getElementById("feedback-history");
+  const applyBtn    = document.getElementById("apply-feedback");
+
+  // --- History load/store (unchanged) ---
+  let historyStore = JSON.parse(localStorage.getItem(historyKey) || "[]");
   historyEl.innerHTML = "";
   historyStore.forEach((snap, idx) => {
     const li = document.createElement("li");
@@ -191,26 +197,55 @@ document.addEventListener("DOMContentLoaded", () => {
     li.addEventListener("click", () => descArea.value = historyStore[idx].desc);
     historyEl.appendChild(li);
   });
-
   function saveHistory() {
-    localStorage.setItem(storageKey, JSON.stringify(historyStore));
+    localStorage.setItem(historyKey, JSON.stringify(historyStore));
   }
   function recordHistory(desc, label, finalized=false) {
     const entry = { desc, label, finalized };
     historyStore.push(entry);
     saveHistory();
     const li = document.createElement("li");
-    li.textContent   = label;
-    li.dataset.idx   = historyStore.length - 1;
+    li.textContent = label;
+    li.dataset.idx = historyStore.length - 1;
     if (finalized) li.classList.add("finalized");
-    li.addEventListener("click", () => descArea.value = entry.desc);
+    li.addEventListener("click", () => descArea.value = desc);
     historyEl.appendChild(li);
   }
 
+  // --- Cache helpers ---
+  function loadCache() {
+    const raw = localStorage.getItem(cacheKey);
+    return raw ? JSON.parse(raw) : null;
+  }
+  function saveCache() {
+    const payload = {
+      title:       titleInput.value,
+      author:      authorInput.value,
+      description: descArea.value
+    };
+    localStorage.setItem(cacheKey, JSON.stringify(payload));
+  }
+
+  // --- Try loading cached meta first ---
+  const cached = loadCache();
+  if (cached) {
+    titleInput.value  = cached.title || "";
+    authorInput.value = cached.author || "";
+    descArea.value    = cached.description || "";
+    loader.style.display  = "none";
+    section.style.display = "flex";
+  } else {
+    // otherwise generate via API
+    fetchDescription();
+  }
+
+  // --- fetchDescription & cache it ---
   async function fetchDescription(feedback=null) {
     loader.style.display = "flex";
     section.style.display= "none";
-    loaderText.textContent = feedback ? "Refining description…" : "Generating description…";
+    loaderText.textContent = feedback
+      ? "Refining description…"
+      : "Generating description…";
 
     const resp = await fetch(`/api/meta/${outlineId}/`, {
       method: 'POST',
@@ -219,27 +254,32 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     if (!resp.ok) throw new Error(resp.statusText);
     const {description} = await resp.json();
+
     descArea.value = description;
     recordHistory(description, feedback ? `✏️ Feedback: "${feedback}"` : "✔ Description ready");
-    loader.style.display = "none";
-    section.style.display= "flex";
+    saveCache();
+
+    loader.style.display  = "none";
+    section.style.display = "flex";
   }
 
-  // Initial load
-  fetchDescription().catch(err => {
-    loader.innerHTML = `<p style="color:#c00;">❌ Could not load.</p>`;
-    console.error(err);
-  });
-
-  // Apply feedback inline
+  // --- Apply feedback inline ---
   applyBtn.addEventListener("click", async () => {
     const fb = feedbackTA.value.trim();
     if (!fb) return;
     feedbackTA.value = "";
-    await fetchDescription(fb).catch(console.error);
+    await fetchDescription(fb).catch(err => {
+      console.error(err);
+      loader.innerHTML += `<p style="color:#c00;">❌ Retry feedback.</p>`;
+    });
   });
 
-  // On “Looks Good”, let the form POST title/author/description to your Django view
+  // --- Persist title & author on change ---
+  [titleInput, authorInput].forEach(el =>
+    el.addEventListener("input", saveCache)
+  );
+
+  // On “Looks Good”, let the form POST title/author/description to Django
 });
 </script>
 {% endblock %}
