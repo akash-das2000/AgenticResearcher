@@ -14,6 +14,7 @@ urlpatterns = [
     path('outline/<int:pk>/', GenerateOutlineView.as_view(), name='generate-outline'),
     path('write/<int:pk>/', DraftSectionView.as_view(), name='draft-section'),
     path('format/<int:pk>/', FormatBlogView.as_view(), name='format-blog'),
+    path('meta/<int:pk>/', MetaSectionView.as_view(), name='meta-api'), 
     path('chat/<int:pk>/', ChatWithPDFView.as_view(), name='chat-with-pdf'),
     path('rules/', NormalizationRuleView.as_view(), name='normalization-rules'),
 ]
