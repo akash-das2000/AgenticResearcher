@@ -45,18 +45,18 @@
     >
       <!-- Step Tracker -->
       <div class="step-tracker" style="display:flex; gap:1rem; flex:none; margin-bottom:1rem;">
-        <div class="step active" style="flex:1; text-align:center; border-bottom:3px solid #28a745;">
+        <a href="{% url 'outline_refine' outline_id=outline_id %}" class="step active">
           1. Outline
-        </div>
-        <div class="step" style="flex:1; text-align:center; border-bottom:3px solid #ccc; color:#777;">
+        </a>
+        <a href="{% url 'section_write' outline_id=outline_id %}" class="step">
           2. Draft
-        </div>
-        <div class="step" style="flex:1; text-align:center; border-bottom:3px solid #ccc; color:#777;">
+        </a>
+        <a href="{% url 'blog_meta' outline_id=outline_id %}" class="step">
           3. Format
-        </div>
-        <div class="step" style="flex:1; text-align:center; border-bottom:3px solid #ccc; color:#777;">
+        </a>
+        <a href="{% url 'blog_finish' outline_id=outline_id %}" class="step">
           4. Finalize
-        </div>
+        </a>
       </div>
 
       <!-- Loader (until outline arrives) -->
@@ -194,7 +194,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const historyEl  = document.getElementById("feedback-history");
   const form       = document.getElementById("feedback-form");
   const textarea   = document.getElementById("feedback");
-  const looksGood  = document.getElementById("looks-good");
 
   // 1) Load only this outline's history
   let historyStore = JSON.parse(localStorage.getItem(storageKey) || "[]");
