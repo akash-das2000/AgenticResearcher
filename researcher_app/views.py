@@ -183,8 +183,11 @@ class DraftSectionView(APIView):
         except (IndexError, TypeError):
             raise ParseError(detail="Invalid section_order on draft")
 
-        # 6) Decide whether to generate or refine
-        feedback = request.data.get("feedback", "").strip()
+        # 6) Safely parse feedback (it may be null in the JSON)
+        raw_fb = request.data.get("feedback")
+        feedback = (raw_fb or "").strip()
+
+        # 7) Decide whether to generate or refine
         if feedback:
             # refine existing draft
             new_body = writer.refine_section(
@@ -196,7 +199,7 @@ class DraftSectionView(APIView):
             # first‐time generation
             new_body = writer.draft_section(sec_info, context)
 
-        # 7) Save and return
+        # 8) Save and return
         draft_obj.content = new_body
         draft_obj.save()
 
