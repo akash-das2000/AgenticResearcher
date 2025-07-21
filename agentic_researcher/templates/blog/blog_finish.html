@@ -1,14 +1,102 @@
 {% extends "base.html" %}
-{% block content %}
-  <h1>All Done!</h1>
-  <p>Your blog is ready. Preview or download below:</p>
+{% load static %}
 
-  <a href="{{ preview_url }}" target="_blank" class="btn btn-outline-primary">
-    Preview HTML
-  </a>
-  {% if pdf_url %}
-  <a href="{{ pdf_url }}" class="btn btn-outline-secondary">
-    Download PDF
-  </a>
-  {% endif %}
+{% block content %}
+  <link rel="stylesheet" href="{% static 'css/progress.css' %}">
+
+  {# Two-column, full-height wrapper under the 81px header #}
+  <div
+    style="
+      position: fixed;
+      top: 81px;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: grid;
+      grid-template-columns: 20% 1fr;
+      overflow: hidden;
+    "
+  >
+    <!-- Left: Download Panel -->
+    <aside
+      style="
+        background: #f4f4f4;
+        border-right: 1px solid #ccc;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      "
+    >
+      <h3>Download</h3>
+      <a
+        href="{% url 'blog_preview' outline_id=outline_id %}?download=html"
+        style="
+          display: block;
+          text-align:center;
+          background:#007bff;
+          color:#fff;
+          padding:0.6rem;
+          border-radius:4px;
+          text-decoration:none;
+        "
+      >Download HTML</a>
+      <a
+        href="{% url 'blog_preview' outline_id=outline_id %}?download=pdf"
+        style="
+          display: block;
+          text-align:center;
+          background:#6c757d;
+          color:#fff;
+          padding:0.6rem;
+          border-radius:4px;
+          text-decoration:none;
+        "
+      >Download PDF</a>
+    </aside>
+
+    <!-- Right: Final Blog -->
+    <main
+      class="main-content"
+      style="
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        padding: 1rem;
+        box-sizing: border-box;
+      "
+    >
+      <!-- Step Tracker -->
+      <div class="step-tracker" style="display:flex; gap:1rem; margin-bottom:1rem; flex:none;">
+        <div class="step completed" style="flex:1; text-align:center; border-bottom:3px solid #28a745;">
+          1. Outline
+        </div>
+        <div class="step completed" style="flex:1; text-align:center; border-bottom:3px solid #28a745;">
+          2. Draft
+        </div>
+        <div class="step completed" style="flex:1; text-align:center; border-bottom:3px solid #28a745;">
+          3. Format
+        </div>
+        <div class="step active" style="flex:1; text-align:center; border-bottom:3px solid #28a745; color:#28a745;">
+          4. Finalize
+        </div>
+      </div>
+
+      <!-- Blog Content -->
+      <div
+        id="blog-content"
+        style="
+          flex:1;
+          overflow-y:auto;
+          padding-right: 1rem;
+        "
+      >
+        {{ blog_html|safe }}
+      </div>
+    </main>
+  </div>
+
+  <style>
+    footer { display: none !important; }
+  </style>
 {% endblock %}
