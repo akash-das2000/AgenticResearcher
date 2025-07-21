@@ -17,29 +17,15 @@
   <main class="main-content">
     <!-- Phase Tracker -->
     <div class="step-tracker">
-      {% comment %}
-        Build ordered list of section IDs
-      {% endcomment %}
       {% with drafts=outline.drafts.all|dictsort:"section_order" %}
       <script>
-        const SECTION_IDS = [
-          {% for d in drafts %}{{ d.id }}{% if not forloop.last %}, {% endif %}{% endfor %}
-        ];
+        const SECTION_IDS = [{% for d in drafts %}{{ d.id }}{% if not forloop.last %}, {% endif %}{% endfor %}];
       </script>
       {% endwith %}
-
-      <a href="{% url 'outline_refine' outline_id=draft.outline.id %}" class="step completed">
-        1. Outline
-      </a>
-      <a href="#" id="step-draft" class="step active">
-        2. Draft
-      </a>
-      <a href="{% url 'blog_meta' outline_id=draft.outline.id %}" class="step" id="step-format">
-        3. Format
-      </a>
-      <a href="{% url 'blog_finish' outline_id=draft.outline.id %}" class="step" id="step-finalize">
-        4. Finalize
-      </a>
+      <a href="{% url 'outline_refine' outline_id=draft.outline.id %}" class="step completed">1. Outline</a>
+      <a href="#" id="step-draft" class="step active">2. Draft</a>
+      <a href="{% url 'blog_meta' outline_id=draft.outline.id %}" class="step disabled" id="step-format">3. Format</a>
+      <a href="{% url 'blog_finish' outline_id=draft.outline.id %}" class="step disabled" id="step-finalize">4. Finalize</a>
     </div>
 
     <!-- Loader -->
@@ -52,17 +38,12 @@
     <section id="draft-section" data-current-section-id="" style="display:none;">
       <h2 id="section-title"></h2>
       <div id="section-content" class="outline-list"></div>
-
       <form id="feedback-form" method="post">
         {% csrf_token %}
         <textarea id="feedback" name="feedback" rows="3" placeholder="Any edits or suggestions?"></textarea>
         <div class="button-group">
-          <button id="looks-good" type="submit" name="feedback" value="OK">
-            Looks Good, Next
-          </button>
-          <button type="submit">
-            Apply Feedback
-          </button>
+          <button id="looks-good" type="submit" name="feedback" value="OK">Looks Good, Next</button>
+          <button type="submit">Apply Feedback</button>
         </div>
       </form>
     </section>
@@ -70,13 +51,11 @@
 </div>
 
 <style>
-  footer { display: none !important; }
-  /* disable future steps */
-  .step.disabled { pointer-events: none; opacity: 0.5; }
-  /* History styling */
-  #feedback-history li { cursor: pointer; padding: 0.2rem 0; }
-  #feedback-history li:hover { text-decoration: underline; }
-  #feedback-history li.finalized { color: #28a745; font-weight: bold; }
+  footer { display:none!important; }
+  .step.disabled { pointer-events:none; opacity:0.5; }
+  #feedback-history li { cursor:pointer; padding:0.2rem 0; }
+  #feedback-history li:hover { text-decoration:underline; }
+  #feedback-history li.finalized { color:#28a745; font-weight:bold; }
 </style>
 {% endblock %}
 
@@ -98,9 +77,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const stepFormat   = document.getElementById("step-format");
   const stepFinalize = document.getElementById("step-finalize");
 
-  // Load cached sections or start empty
+  // load cache
   let cache = JSON.parse(localStorage.getItem(storageKey) || "{}");
-  // rebuild history list
   historyEl.innerHTML = "";
   Object.values(cache).forEach(entry => {
     const li = document.createElement("li");
@@ -110,57 +88,44 @@ document.addEventListener("DOMContentLoaded", () => {
     historyEl.appendChild(li);
   });
 
-  function saveCache() {
+  function save() {
     localStorage.setItem(storageKey, JSON.stringify(cache));
   }
-
-  function recordHistory(id, label, finalized=false) {
-    cache[id] = {
-      id,
-      label,
-      title:   titleEl.textContent,
-      content: contentEl.innerHTML,
-      finalized
-    };
-    saveCache();
+  function record(id, label, finalized=false) {
+    cache[id] = { id, label, title:titleEl.textContent, content:contentEl.innerHTML, finalized };
+    save();
     const li = document.createElement("li");
     li.textContent = label;
     if (finalized) li.classList.add("finalized");
     li.addEventListener("click", () => renderSection(id));
     historyEl.appendChild(li);
-    // unlock Draft step
-    stepDraft.classList.remove("disabled");
+    stepFormat.classList.remove("disabled");
   }
 
   function renderSection(id) {
-    const entry = cache[id];
-    titleEl.textContent = entry.title;
-    contentEl.innerHTML = entry.content;
+    const e = cache[id];
+    titleEl.textContent = e.title;
+    contentEl.innerHTML = e.content;
     section.dataset.currentSectionId = id;
-    loader.style.display  = "none";
-    section.style.display = "flex";
+    loader.style.display  = 'none';
+    section.style.display = 'flex';
     updateNav();
   }
 
   async function fetchSection(id, feedback=null) {
-    loader.style.display  = "flex";
-    section.style.display = "none";
-    loaderText.textContent = feedback
-      ? "Refining this section…"
-      : "Generating section draft…";
-
+    loader.style.display  = 'flex';
+    section.style.display = 'none';
+    loaderText.textContent = feedback ? 'Refining this section…' : 'Generating section draft…';
     const resp = await fetch(`/api/write/${outlineId}/`, {
-      method: 'POST',
+      method:'POST',
       headers: {
-        'X-CSRFToken': '{{ csrf_token }}',
-        'Content-Type': 'application/json'
+        'X-CSRFToken':'{{ csrf_token }}',
+        'Content-Type':'application/json'
       },
       body: JSON.stringify({ section_id:id, feedback })
     });
     if (!resp.ok) throw new Error(resp.statusText);
     const data = await resp.json();
-
-    // cache it
     cache[id] = {
       id,
       label: feedback ? `✏️ ${feedback}` : `✔ ${data.section_title}`,
@@ -168,44 +133,37 @@ document.addEventListener("DOMContentLoaded", () => {
       content: data.content,
       finalized: false
     };
-    saveCache();
+    save();
     return data;
   }
 
   async function loadSection(id, feedback=null) {
-    let data;
     if (!feedback && cache[id]) {
-      // already have it
       renderSection(id);
       return;
     }
-    data = await fetchSection(id, feedback);
-    renderSection(data.id);
+    const d = await fetchSection(id, feedback);
+    renderSection(d.id);
   }
 
   function updateNav() {
-    // index of current
     const curIdx = SECTION_IDS.indexOf(Number(section.dataset.currentSectionId));
     SECTION_IDS.forEach((sid, idx) => {
-      const stepEl = [stepDraft, stepFormat, stepFinalize][idx-1];
+      const stepEl = [stepFormat, stepFinalize][idx-1];
       if (!stepEl) return;
-      if (idx <= curIdx) {
-        stepEl.classList.remove("disabled");
-        stepEl.href = ["#", "#", "#"][idx]  // keep Draft clickable
-      } else {
-        stepEl.classList.add("disabled");
-      }
+      if (idx <= curIdx) stepEl.classList.remove("disabled");
+      else               stepEl.classList.add("disabled");
     });
   }
 
-  // initial load of first draft
+  // initial
   loadSection(initialId).catch(console.error);
 
   form.addEventListener("submit", async e => {
-    if (e.submitter.id === "looks-good") {
+    if (e.submitter.id==="looks-good") {
       const cur = Number(section.dataset.currentSectionId);
-      recordHistory(cur, "✔ Finalized section.", true);
-      return; // let Django redirect to next section
+      record(cur, "✔ Finalized section.", true);
+      return; // Django will redirect
     }
     e.preventDefault();
     const fb = textarea.value.trim();
