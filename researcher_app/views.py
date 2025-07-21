@@ -234,7 +234,7 @@ class FormatBlogView(APIView):
 
 class MetaSectionView(APIView):
     """
-    API to generate or refine blog metadata (title, author, desc).
+    API to generate or refine only the blog DESCRIPTION.
     """
     def post(self, request, pk, *args, **kwargs):
         outline = get_object_or_404(BlogOutline, pk=pk)
@@ -244,12 +244,11 @@ class MetaSectionView(APIView):
         fb     = (raw_fb or "").strip()
 
         if fb:
-            meta = writer.refine_meta(outline, fb, context)
+            desc = writer.refine_description(outline, fb, context)
         else:
-            meta = writer.generate_meta(outline, context)
+            desc = writer.generate_description(outline, context)
 
-        # meta must be a dict, e.g. { "title":..., "author":..., "description":... }
-        return Response(meta, status=status.HTTP_200_OK)
+        return Response({"description": desc}, status=status.HTTP_200_OK)
         
 
 
