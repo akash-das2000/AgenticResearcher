@@ -232,6 +232,27 @@ class FormatBlogView(APIView):
             )
 
 
+class MetaSectionView(APIView):
+    """
+    API to generate or refine blog metadata (title, author, desc).
+    """
+    def post(self, request, pk, *args, **kwargs):
+        outline = get_object_or_404(BlogOutline, pk=pk)
+        context = get_object_or_404(ExtractedContent, pdf=outline.pdf).text
+
+        raw_fb = request.data.get("feedback")
+        fb     = (raw_fb or "").strip()
+
+        if fb:
+            meta = writer.refine_meta(outline, fb, context)
+        else:
+            meta = writer.generate_meta(outline, context)
+
+        # meta must be a dict, e.g. { "title":..., "author":..., "description":... }
+        return Response(meta, status=status.HTTP_200_OK)
+        
+
+
 class ChatWithPDFView(APIView):
     """
     API to chat with PDF content.
