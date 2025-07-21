@@ -154,8 +154,6 @@
 
 <style>
   footer { display: none !important; }
-
-  /* History list styling */
   #feedback-history li {
     cursor: pointer;
     padding: 0.2rem 0;
@@ -173,35 +171,35 @@
 {% block extra_scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const outlineId = "{{ draft.outline.id }}";
-  const draftId   = "{{ draft.id }}";
-  const loader    = document.getElementById("loader-section");
-  const loaderText= document.getElementById("loader-text");
-  const section   = document.getElementById("draft-section");
-  const titleEl   = document.getElementById("section-title");
-  const contentEl = document.getElementById("section-content");
-  const historyEl = document.getElementById("feedback-history");
-  const form      = document.getElementById("feedback-form");
-  const textarea  = document.getElementById("feedback");
+  const outlineId  = "{{ draft.outline.id }}";
+  const storageKey = `sectionHistory_${outlineId}`;
+  const draftId    = "{{ draft.id }}";
+  const loader     = document.getElementById("loader-section");
+  const loaderText = document.getElementById("loader-text");
+  const section    = document.getElementById("draft-section");
+  const titleEl    = document.getElementById("section-title");
+  const contentEl  = document.getElementById("section-content");
+  const historyEl  = document.getElementById("feedback-history");
+  const form       = document.getElementById("feedback-form");
+  const textarea   = document.getElementById("feedback");
 
-  // 1) Load persistent history
-  let historyList = JSON.parse(localStorage.getItem("sectionHistory") || "[]");
-  historyEl.innerHTML = "";  // clear the placeholder
-  historyList.forEach(entry => {
+  // 1) Load only this section's history
+  let historyList = JSON.parse(localStorage.getItem(storageKey) || "[]");
+  historyEl.innerHTML = "";
+  historyList.forEach((entry, idx) => {
     const li = document.createElement("li");
-    li.textContent = entry.label;
-    li.dataset.sectionId = entry.id;
+    li.textContent     = entry.label;
+    li.dataset.index   = idx;
     if (entry.finalized) li.classList.add("finalized");
     li.addEventListener("click", () => {
-      titleEl.textContent   = entry.title;
-      contentEl.innerHTML   = entry.content;
+      titleEl.textContent  = entry.title;
+      contentEl.innerHTML  = entry.content;
     });
     historyEl.appendChild(li);
   });
 
-  // 2) Helpers to persist & render
   function saveHistory() {
-    localStorage.setItem("sectionHistory", JSON.stringify(historyList));
+    localStorage.setItem(storageKey, JSON.stringify(historyList));
   }
   function recordHistory(id, label, finalized=false) {
     const entry = {
@@ -213,19 +211,17 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     historyList.push(entry);
     saveHistory();
-
     const li = document.createElement("li");
-    li.textContent = label;
-    li.dataset.sectionId = id;
+    li.textContent   = label;
+    li.dataset.index = historyList.length - 1;
     if (finalized) li.classList.add("finalized");
     li.addEventListener("click", () => {
-      titleEl.textContent   = entry.title;
-      contentEl.innerHTML   = entry.content;
+      titleEl.textContent  = entry.title;
+      contentEl.innerHTML  = entry.content;
     });
     historyEl.appendChild(li);
   }
 
-  // 3) Fetch or refine the draft via API
   async function fetchDraft(feedback = null) {
     loader.style.display  = "flex";
     section.style.display = "none";
@@ -251,7 +247,6 @@ document.addEventListener("DOMContentLoaded", () => {
     loader.style.display  = "none";
     section.style.display = "flex";
 
-    // log it
     if (feedback) {
       recordHistory(data.id, `✏️ Refinement: "${feedback}"`);
     } else {
@@ -259,24 +254,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 4) Initial load
+  // initial load
   fetchDraft().catch(err => {
     console.error(err);
     loader.innerHTML = `<p style="color:#c00;">❌ Could not load draft.</p>`;
   });
 
-  // 5) Handle feedback submissions
   form.addEventListener("submit", async e => {
-    // a) Looks Good → finalize then let the form redirect
     if (e.submitter && e.submitter.id === "looks-good") {
       const curId = section.dataset.currentSectionId;
-      if (curId) {
-        recordHistory(curId, "✔ Finalized section.", true);
-      }
-      return;  // default POST → next section page
+      if (curId) recordHistory(curId, "✔ Finalized section.", true);
+      return;  // default submit → redirect
     }
-
-    // b) Apply Feedback → intercept, refine in-place
     e.preventDefault();
     const fb = textarea.value.trim();
     if (!fb) return;
