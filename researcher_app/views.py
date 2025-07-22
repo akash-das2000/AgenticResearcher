@@ -22,6 +22,7 @@ from django.urls import reverse
 from django.conf import settings
 import os
 from django import forms
+from researcher_app.services.rag_service import RAGService
 
 
 
@@ -543,6 +544,17 @@ def blog_preview(request, outline_id):
     )
     return HttpResponse(html_content)
 
+# —————————————————————————————————————————
+# Codes for Chat with PDF
+# —————————————————————————————————————————
+
+def chat_with_pdf(request, pdf_id):
+    question = request.POST["question"]
+    svc = RAGService(pdf_id)
+    svc.build_index()
+    hits = svc.retrieve(question, k=3)
+    answer = svc.ask_gemini(hits, question)
+    return JsonResponse({"answer": answer, "hits": hits})
 
 
 # Frontend page renderers
