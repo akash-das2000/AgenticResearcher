@@ -20,12 +20,12 @@ from .models import ExtractedContent
 # -----------------------------------------------------------------------------
 # Configuration: endpoints & API keys from settings.py
 # -----------------------------------------------------------------------------
-TEXT_EMBED_URL  = settings.CLIP_TEXT_EMBED_URL    # e.g. "https://…/embed/text"
-IMAGE_EMBED_URL = settings.CLIP_IMAGE_EMBED_URL   # e.g. "https://…/embed/image"
+TEXT_EMBED_URL  = os.environ["CLIP_TEXT_EMBED_URL"]    # e.g. https://…/embed/text
+IMAGE_EMBED_URL = os.environ["CLIP_IMAGE_EMBED_URL"]   # e.g. https://…/embed/image
 EMBED_HEADERS   = {"Content-Type": "application/json"}
 
-GEMINI_API_KEY = settings.GEMINI_API_KEY
-gemini_client  = genai.Client(api_key=GEMINI_API_KEY)
+GEMINI_API_KEY  = os.environ["GEMINI_API_KEY"]
+gemini_client   = genai.Client(api_key=GEMINI_API_KEY)
 
 # -----------------------------------------------------------------------------
 # Tokenizer
