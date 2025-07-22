@@ -255,52 +255,38 @@ class MetaSectionView(APIView):
 
 class ChatWithPDFView(APIView):
     """
-    API to chat with PDF content.
+    POST /api/chat/pdf/<pdf_id>/
+    Body: { "question": "What is the main contribution?" }
     """
-    def post(self, request, pk, *args, **kwargs):
+    def post(self, request, pdf_id):
+        # 1) Verify the PDF exists
         try:
-            pdf = UploadedPDF.objects.get(pk=pk)
-            user_message = request.data.get('message')
-
-            content = ExtractedContent.objects.get(pdf=pdf)
-            chat_history = ChatMessage.objects.filter(pdf=pdf).order_by('timestamp')
-            history_text = "\n".join([
-                f"User: {c.user_message}\nAgent: {c.agent_response}"
-                for c in chat_history
-            ])
-
-            context = (
-                f"Extracted Text:\n{content.text}\n\n"
-                f"Images:\n{content.images}\n\n"
-                f"Tables:\n{content.tables}\n\n"
-                f"Chat History:\n{history_text}"
-            )
-
-            from .services.api_handler import call_llm
-            prompt = (
-                "You are a helpful assistant. Answer questions about the PDF content.\n\n"
-                f"{context}\n\n"
-                f"User: {user_message}\nAgent:"
-            )
-            agent_response = call_llm(prompt, preferred="openai")
-
-            chat_obj = ChatMessage.objects.create(
-                pdf=pdf,
-                user_message=user_message,
-                agent_response=agent_response
-            )
-            serializer = ChatMessageSerializer(chat_obj)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            pdf = UploadedPDF.objects.get(pk=pdf_id)
         except UploadedPDF.DoesNotExist:
             return Response(
                 {"error": "PDF not found."},
                 status=status.HTTP_404_NOT_FOUND
             )
-        except ExtractedContent.DoesNotExist:
+
+        # 2) Pull the user’s question
+        question = request.data.get("question", "").strip()
+        if not question:
             return Response(
-                {"error": "Extracted content not found."},
-                status=status.HTTP_404_NOT_FOUND
+                {"error": "No question provided."},
+                status=status.HTTP_400_BAD_REQUEST
             )
+
+        # 3) Run RAG
+        svc = RAGService(pdf_id)
+        svc.build_index()                # embed & index
+        hits = svc.retrieve(question, k=3)
+        answer = svc.ask_gemini(hits, question)
+
+        # 4) Return structured JSON
+        return Response({
+            "answer": answer,
+            "hits": hits
+        })
 
 
 class NormalizationRuleView(APIView):
