@@ -28,6 +28,12 @@ pdfplumber>=0.10
 Pillow>=10.0
 pandas>=2.1
 
+# 📡 RAG & Embeddings
+faiss-cpu>=1.7.0
+tiktoken>=0.4.0
+numpy>=1.24.0
+requests>=2.28.0
+
 # 🧹 Static Files & CORS
 whitenoise>=6.6.0
 django-cors-headers>=4.0
