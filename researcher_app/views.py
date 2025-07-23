@@ -410,7 +410,7 @@ def chat_page(request, pdf_id):
     pdf = get_object_or_404(UploadedPDF, pk=pdf_id)
     return render(request, 'chat_with_pdf.html', {
         'pdf_id': pdf_id,
-        'pdf_title': pdf.title or pdf.file.name,
+        'pdf_title': filename,
     })
 
 
