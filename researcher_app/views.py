@@ -5,26 +5,21 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import status
 from .models import (
-    UploadedPDF, ExtractedContent, BlogOutline, BlogDraft, ChatMessage, NormalizationRule, Feedback
+    UploadedPDF, ExtractedContent, BlogOutline, BlogDraft,
+    ChatMessage, NormalizationRule, Feedback
 )
 from .serializers import (
     UploadedPDFSerializer, ExtractedContentSerializer,
     BlogOutlineSerializer, BlogDraftSerializer,
     ChatMessageSerializer, NormalizationRuleSerializer
 )
-from .services import pdf_extractor, outline, writer, formatter, outline
-from io import BytesIO
+from .services import pdf_extractor, outline, writer, formatter
 import tempfile
 import threading
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
-from django.urls import reverse
-from django.conf import settings
-import os
 from django import forms
 from researcher_app.services.rag_service import RAGService
-
-
 
 
 def parse_pdf_async(pdf_id, file_path):
@@ -49,7 +44,6 @@ def parse_pdf_async(pdf_id, file_path):
             tables=result['tables']
         )
         print("✅ Saved extracted content to DB")
-
         print(f"✅ Background parsing completed for PDF {pdf_id}")
 
     except Exception as e:
@@ -63,34 +57,25 @@ class UploadPDFView(APIView):
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, *args, **kwargs):
-        print("DEBUG: request.data =", request.data)
-        print("DEBUG: request.FILES =", request.FILES)
-
         uploaded_file = request.FILES.get('file')
         if not uploaded_file:
-            return Response(
-                {"error": "No file provided."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "No file provided."},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         serializer = UploadedPDFSerializer(data=request.data)
         if serializer.is_valid():
             pdf = serializer.save()
-            # Kick off background parse
             threading.Thread(
                 target=parse_pdf_async,
                 args=(pdf.id, pdf.file.path),
                 daemon=True
             ).start()
-
             return Response({
                 "id": pdf.id,
                 "url": pdf.file.url,
                 "parse_status": "pending"
             }, status=status.HTTP_201_CREATED)
-        else:
-            print("DEBUG: serializer errors =", serializer.errors)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ExtractPDFView(APIView):
@@ -98,7 +83,6 @@ class ExtractPDFView(APIView):
     GET:  return existing extracted content.
     POST: re-run extraction and update.
     """
-
     def get(self, request, pk, *args, **kwargs):
         try:
             content_obj = ExtractedContent.objects.get(pdf__pk=pk)
@@ -114,7 +98,8 @@ class ExtractPDFView(APIView):
         try:
             pdf = UploadedPDF.objects.get(pk=pk)
         except UploadedPDF.DoesNotExist:
-            return Response({"error": "PDF not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "PDF not found."},
+                            status=status.HTTP_404_NOT_FOUND)
 
         result = pdf_extractor.extract_pdf(pdf.file.path)
         content_obj, _ = ExtractedContent.objects.update_or_create(
@@ -132,30 +117,21 @@ class ExtractPDFView(APIView):
 class GenerateOutlineView(APIView):
     """
     API to generate or refine a blog outline.
-    - POST /api/outline/<outline_id>/ with no body → fresh generate
-    - POST /api/outline/<outline_id>/ with JSON {"feedback": "..."} → refine
     """
     def post(self, request, pk, *args, **kwargs):
-        # 1) Load the existing BlogOutline
         outline_obj = get_object_or_404(BlogOutline, pk=pk)
-
-        # 2) Grab the extracted text
         content = get_object_or_404(ExtractedContent, pdf=outline_obj.pdf)
-
-        # 3) Decide whether to generate or refine
         fb = request.data.get("feedback", None)
         if fb:
             new_json = outline.refine_outline(outline_obj.outline_json, fb)
         else:
             new_json = outline.generate_outline(content.text)
 
-        # 4) Save & return
         outline_obj.outline_json = new_json
-        outline_obj.status       = "finalized"
+        outline_obj.status = "finalized"
         outline_obj.save()
         serializer = BlogOutlineSerializer(outline_obj)
         return Response(serializer.data, status=status.HTTP_200_OK)
-            
 
 
 class DraftSectionView(APIView):
@@ -163,47 +139,34 @@ class DraftSectionView(APIView):
     API to draft or refine blog sections.
     """
     def post(self, request, pk, *args, **kwargs):
-        # 1) Lookup the outline
         outline_obj = get_object_or_404(BlogOutline, pk=pk)
-
-        # 2) Must have a section_id for an existing draft
         draft_id = request.data.get("section_id")
         if not draft_id:
-            raise ParseError(detail="`section_id` is required")
+            return Response({"error": "`section_id` is required."},
+                            status=status.HTTP_400_BAD_REQUEST)
 
-        # 3) Fetch the BlogDraft
         draft_obj = get_object_or_404(BlogDraft, pk=draft_id, outline=outline_obj)
-
-        # 4) Grab full extracted text
         context = get_object_or_404(ExtractedContent, pdf=outline_obj.pdf).text
-
-        # 5) Pull the corresponding section info from the outline JSON
         sections = outline_obj.outline_json.get("sections", [])
         try:
             sec_info = sections[draft_obj.section_order]
         except (IndexError, TypeError):
-            raise ParseError(detail="Invalid section_order on draft")
+            return Response({"error": "Invalid section_order on draft."},
+                            status=status.HTTP_400_BAD_REQUEST)
 
-        # 6) Safely parse feedback (it may be null in the JSON)
         raw_fb = request.data.get("feedback")
         feedback = (raw_fb or "").strip()
-
-        # 7) Decide whether to generate or refine
         if feedback:
-            # refine existing draft
             new_body = writer.refine_section(
                 draft_obj.section_title,
                 draft_obj.content,
                 feedback
             )
         else:
-            # first‐time generation
             new_body = writer.draft_section(sec_info, context)
 
-        # 8) Save and return
         draft_obj.content = new_body
         draft_obj.save()
-
         serializer = BlogDraftSerializer(draft_obj)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -214,8 +177,8 @@ class FormatBlogView(APIView):
     """
     def post(self, request, pk, *args, **kwargs):
         try:
-            outline = BlogOutline.objects.get(pk=pk)
-            drafts = BlogDraft.objects.filter(outline=outline)
+            outline_obj = BlogOutline.objects.get(pk=pk)
+            drafts = BlogDraft.objects.filter(outline=outline_obj)
             sections = [
                 {"title": d.section_title, "body": d.content}
                 for d in drafts
@@ -238,37 +201,24 @@ class MetaSectionView(APIView):
     API to generate or refine only the blog DESCRIPTION.
     """
     def post(self, request, pk, *args, **kwargs):
-        outline = get_object_or_404(BlogOutline, pk=pk)
-        context = get_object_or_404(ExtractedContent, pdf=outline.pdf).text
-
+        outline_obj = get_object_or_404(BlogOutline, pk=pk)
+        context = get_object_or_404(ExtractedContent, pdf=outline_obj.pdf).text
         raw_fb = request.data.get("feedback")
-        fb     = (raw_fb or "").strip()
-
+        fb = (raw_fb or "").strip()
         if fb:
-            desc = writer.refine_description(outline, fb, context)
+            desc = writer.refine_description(outline_obj, fb, context)
         else:
-            desc = writer.generate_description(outline, context)
-
+            desc = writer.generate_description(outline_obj, context)
         return Response({"description": desc}, status=status.HTTP_200_OK)
-        
 
 
 class ChatWithPDFView(APIView):
     """
     POST /api/chat/pdf/<pdf_id>/
-    Body: { "question": "What is the main contribution?" }
+    Body: { "question": "..." }
     """
     def post(self, request, pdf_id):
-        # 1) Verify the PDF exists
-        try:
-            pdf = UploadedPDF.objects.get(pk=pdf_id)
-        except UploadedPDF.DoesNotExist:
-            return Response(
-                {"error": "PDF not found."},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        # 2) Pull the user’s question
+        pdf = get_object_or_404(UploadedPDF, pk=pdf_id)
         question = request.data.get("question", "").strip()
         if not question:
             return Response(
@@ -276,13 +226,11 @@ class ChatWithPDFView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # 3) Run RAG
         svc = RAGService(pdf_id)
-        svc.build_index()                # embed & index
+        svc.build_index()
         hits = svc.retrieve(question, k=3)
         answer = svc.ask_gemini(hits, question)
 
-        # 4) Return structured JSON
         return Response({
             "answer": answer,
             "hits": hits
@@ -306,115 +254,64 @@ class NormalizationRuleView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
-
 # —————————————————————————————————————————
-# New “Make a Blog” workflow views (steps 2–5)
+# “Make a Blog” workflow views (steps 2–5)
 # —————————————————————————————————————————
 
 def new_blog(request, pdf_id):
-    """
-    Step 1 (launcher):
-    Create a placeholder BlogOutline (no LLM call yet),
-    then redirect into the outline‐refine page where
-    the real outline generation will happen via the API.
-    """
     pdf = get_object_or_404(UploadedPDF, id=pdf_id)
-    # Ensure the PDF has been parsed
     content = get_object_or_404(ExtractedContent, pdf=pdf)
-
-    # 1) Create an outline record with empty JSON & pending status
     outline_obj = BlogOutline.objects.create(
         pdf=pdf,
-        outline_json={},       # no content yet
-        status="pending"       # mark as waiting for generation
+        outline_json={},
+        status="pending"
     )
-
-    # 2) Redirect immediately into the outline phase
     return redirect("outline_refine", outline_id=outline_obj.id)
 
 
 def outline_refine(request, outline_id):
-    """
-    Step 1: show the generated outline, let the user tweak it,
-    record every tweak in Feedback, and once ‘Looks Good’ is clicked,
-    finalize the outline and create empty drafts for each section.
-    """
     outline_obj = get_object_or_404(BlogOutline, id=outline_id)
-
     if request.method == "POST":
         feedback_text = request.POST.get("feedback", "").strip()
-
-        # 1) Log the feedback (section_order=None for outline)
         Feedback.objects.create(
             outline=outline_obj,
             section_order=None,
             text=feedback_text
         )
-
-        # 2) If they clicked “Looks Good” (name="feedback" value="OK")
         if request.POST.get("feedback") == "OK":
             outline_obj.status = "finalized"
             outline_obj.save()
-
-            # Seed a BlogDraft for each section in the outline JSON
             sections = outline_obj.outline_json.get("sections", [])
             for idx, sec in enumerate(sections):
                 BlogDraft.objects.create(
                     outline=outline_obj,
                     section_order=idx,
                     section_title=sec["title"],
-                    content=""  # will be generated in section_write
+                    content=""
                 )
-
-            # Jump into the first section
             return redirect("section_write", outline_id=outline_obj.id)
-
-        # 3) Otherwise (“Apply Feedback”) → re-generate the outline
         updated_outline = outline.refine_outline(
-            outline_obj.outline_json,
-            feedback_text
+            outline_obj.outline_json, feedback_text
         )
         outline_obj.outline_json = updated_outline
         outline_obj.save()
 
-    # On GET (or after a refinement), re–render the page
     feedbacks = outline_obj.feedbacks.filter(section_order=None)
-    sections  = outline_obj.outline_json.get("sections", [])
-
+    sections = outline_obj.outline_json.get("sections", [])
     return render(request, "blog/outline_refine.html", {
-        "outline":   outline_obj,
-        "sections":  sections,
+        "outline": outline_obj,
+        "sections": sections,
         "feedbacks": feedbacks,
-        "outline_id":  outline_id, 
+        "outline_id": outline_id,
     })
 
 
-
 def section_write(request, outline_id):
-    """
-    Step 3: Loop through each BlogDraft:
-    – On GET: if content is blank, call writer.draft_section(...)
-      and save it.
-    – Render the draft + feedback box.
-    – On POST: if feedback is “OK”, mark is_final; else call writer.refine_section(...)
-      and re‐save, then reload.
-    """
     outline_obj = get_object_or_404(BlogOutline, id=outline_id)
-
-    # next unfinished section
-    draft = (
-        outline_obj.drafts
-        .filter(is_final=False)
-        .order_by("section_order")
-        .first()
-    )
-
-    # if all sections are done, move on
+    draft = outline_obj.drafts.filter(is_final=False).order_by("section_order").first()
     if not draft:
         return redirect("blog_meta", outline_id=outline_id)
 
-    # grab the full extracted text for reference
     full_text = get_object_or_404(ExtractedContent, pdf=outline_obj.pdf).text
 
     if request.method == "POST":
@@ -423,25 +320,18 @@ def section_write(request, outline_id):
             draft.is_final = True
             draft.save()
         else:
-            # apply a refinement pass
             draft.content = writer.refine_section(
-                draft.section_title,
-                draft.content,
-                fb
+                draft.section_title, draft.content, fb
             )
             draft.save()
-        # reload to either show next section or updated content
         return redirect("section_write", outline_id=outline_id)
 
-    # First‐time GET: generate the draft if empty
     if not draft.content:
         sec_info = outline_obj.outline_json["sections"][draft.section_order]
         draft.content = writer.draft_section(sec_info, full_text)
         draft.save()
 
-    # === NEW: pull in any past tweak requests for this section ===
     feedbacks = outline_obj.feedbacks.filter(section_order=draft.section_order)
-
     return render(request, "blog/section_write.html", {
         "draft": draft,
         "feedbacks": feedbacks,
@@ -452,95 +342,59 @@ class BlogMetaForm(forms.Form):
     title       = forms.CharField(max_length=200, required=False, label="Blog Title")
     author_name = forms.CharField(max_length=100, required=False, label="Author Name")
 
-def blog_meta(request, outline_id):
-    """
-    Step: collect title & author before finalizing.
-    """
-    outline = get_object_or_404(BlogOutline, id=outline_id)
 
+def blog_meta(request, outline_id):
+    outline_obj = get_object_or_404(BlogOutline, id=outline_id)
     if request.method == "POST":
         form = BlogMetaForm(request.POST)
         if form.is_valid():
-            outline.title       = form.cleaned_data["title"]
-            outline.author_name = form.cleaned_data["author_name"]
-            outline.save()
+            outline_obj.title = form.cleaned_data["title"]
+            outline_obj.author_name = form.cleaned_data["author_name"]
+            outline_obj.save()
             return redirect("blog_finish", outline_id=outline_id)
     else:
         form = BlogMetaForm(initial={
-            "title":       outline.title,
-            "author_name": outline.author_name
+            "title": outline_obj.title,
+            "author_name": outline_obj.author_name
         })
-
     return render(request, "blog/blog_meta.html", {
-        "form":       form,
+        "form": form,
         "outline_id": outline_id,
     })
 
 
-
 def blog_finish(request, outline_id):
-    # 1) Fetch outline & all its section drafts
-    outline = get_object_or_404(BlogOutline, id=outline_id)
-    drafts = outline.drafts.order_by("section_order")
-    sections = [
-        {"title": d.section_title, "body": d.content}
-        for d in drafts
-    ]
-
-    # 2) Assemble the full blog HTML
+    outline_obj = get_object_or_404(BlogOutline, id=outline_id)
+    drafts = outline_obj.drafts.order_by("section_order")
+    sections = [{"title": d.section_title, "body": d.content} for d in drafts]
     html_content = formatter.assemble_html(
         sections,
-        blog_title=outline.title or "Untitled Blog",
+        blog_title=outline_obj.title or "Untitled Blog",
         author=(request.user.username if request.user.is_authenticated else "Anonymous")
     )
-
-    # 3) Save out HTML & PDF to MEDIA_ROOT
     files = formatter.save_html_and_pdf(
-        html_content,
-        filename=f"blog_{outline.id}"
+        html_content, filename=f"blog_{outline_obj.id}"
     )
-    # files == {'html_path': '/app/media/blog_5.html', 'pdf_path': '/app/media/blog_5.pdf'}
-
-    # 4) Build public URLs (if you need them elsewhere)
     html_url = settings.MEDIA_URL + os.path.basename(files['html_path'])
-    pdf_url  = settings.MEDIA_URL + os.path.basename(files['pdf_path'])
-
-    # 5) Render final template with everything it needs
+    pdf_url = settings.MEDIA_URL + os.path.basename(files['pdf_path'])
     return render(request, "blog/blog_finish.html", {
-        "outline_id": outline_id,     # for your {% url 'blog_preview' outline_id=outline_id %}
-        "blog_html":  html_content,   # the full, scrollable blog
-        "html_url":   html_url,       # (optional) direct HTML download link
-        "pdf_url":    pdf_url,        # (optional) direct PDF download link
+        "outline_id": outline_id,
+        "blog_html": html_content,
+        "html_url": html_url,
+        "pdf_url": pdf_url,
     })
 
+
 def blog_preview(request, outline_id):
-    """
-    Renders the assembled blog HTML inline for previewing.
-    """
-    outline = get_object_or_404(BlogOutline, id=outline_id)
-    drafts = outline.drafts.order_by("section_order")
-    sections = [
-        {"title": d.section_title, "body": d.content}
-        for d in drafts
-    ]
+    outline_obj = get_object_or_404(BlogOutline, id=outline_id)
+    drafts = outline_obj.drafts.order_by("section_order")
+    sections = [{"title": d.section_title, "body": d.content} for d in drafts]
     html_content = formatter.assemble_html(
         sections,
-        blog_title=outline.title or "Untitled Blog",
-        author=outline.author_name or "Anonymous"
+        blog_title=outline_obj.title or "Untitled Blog",
+        author=outline_obj.author_name or "Anonymous"
     )
     return HttpResponse(html_content)
-
-# —————————————————————————————————————————
-# Codes for Chat with PDF
-# —————————————————————————————————————————
-
-def chat_with_pdf(request, pdf_id):
-    question = request.POST["question"]
-    svc = RAGService(pdf_id)
-    svc.build_index()
-    hits = svc.retrieve(question, k=3)
-    answer = svc.ask_gemini(hits, question)
-    return JsonResponse({"answer": answer, "hits": hits})
 
 
 # Frontend page renderers
@@ -549,8 +403,15 @@ def upload_page(request):
     return render(request, 'upload.html')
 
 
-def chat_page(request, pk):
-    return render(request, 'chat.html', {'pdf_id': pk})
+def chat_page(request, pdf_id):
+    """
+    Renders the two-column Chat-with-PDF UI.
+    """
+    pdf = get_object_or_404(UploadedPDF, pk=pdf_id)
+    return render(request, 'chat_with_pdf.html', {
+        'pdf_id': pdf_id,
+        'pdf_title': pdf.title or pdf.file.name,
+    })
 
 
 def blog_page(request, pk):
