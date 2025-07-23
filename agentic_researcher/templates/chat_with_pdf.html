@@ -2,58 +2,47 @@
 {% extends "base.html" %}
 {% load static %}
 
-{# Pull in your chat-specific CSS #}
+{# 1. Pull in our new chat CSS #}
 {% block extra_styles %}
 <link rel="stylesheet" href="{% static 'css/chat_with_pdf.css' %}">
 {% endblock %}
 
-{# Suppress the site-wide footer #}
+{# 2. Suppress the site footer #}
 {% block footer %}{% endblock %}
 
 {% block content %}
-<div class="container my-5">
-  <div class="row">
-    {# Left column: chat history #}
-    <div class="col-lg-4 mb-4">
-      <div class="card h-100">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h5 class="mb-0">Chat History</h5>
-          <button id="toggle-history" class="btn btn-sm btn-outline-secondary">
-            ⮜
-          </button>
-        </div>
-        <ul id="chat-history" class="list-group list-group-flush overflow-auto" style="max-height: 70vh;">
-          <!-- populated by JS -->
-        </ul>
+  <div class="chat-container">
+    <!-- LEFT: history sidebar -->
+    <aside id="history-panel">
+      <div id="history-header">
+        <h3>Chat History</h3>
+        <button id="toggle-history">⮜</button>
       </div>
-    </div>
+      <ul id="chat-history">
+        <!-- populated by JS -->
+      </ul>
+    </aside>
 
-    {# Right column: active chat window #}
-    <div class="col-lg-8">
-      <div class="card h-100 d-flex flex-column">
-        <div class="card-header">
-          <strong>Chat with PDF:</strong> {{ pdf_title }}
-        </div>
-        <div id="chat-window" class="card-body flex-grow-1 overflow-auto">
-          <!-- chat bubbles go here -->
-        </div>
-        <div class="card-footer">
-          <form id="chat-form" class="d-flex">
-            {% csrf_token %}
-            <input
-              type="text"
-              id="chat-input"
-              class="form-control me-2"
-              placeholder="Ask something about this PDF…"
-              autocomplete="off"
-            />
-            <button type="submit" id="send-btn" class="btn btn-primary">Send</button>
-          </form>
-        </div>
+    <!-- RIGHT: chat area -->
+    <section class="main-content">
+      <div class="chat-header">
+        Chat with PDF: <strong>{{ pdf_title }}</strong>
       </div>
-    </div>
+      <div id="chat-window">
+        <!-- bubbles go here -->
+      </div>
+      <form id="chat-form">
+        {% csrf_token %}
+        <input
+          type="text"
+          id="chat-input"
+          placeholder="Ask something about this PDF…"
+          autocomplete="off"
+        />
+        <button type="submit" id="send-btn">Send</button>
+      </form>
+    </section>
   </div>
-</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -65,15 +54,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let history = JSON.parse(localStorage.getItem(historyKey) || "[]");
 
-  const historyList = document.getElementById("chat-history");
-  const chatWindow  = document.getElementById("chat-window");
-  const toggleBtn   = document.getElementById("toggle-history");
+  const historyPanel = document.getElementById("history-panel");
+  const toggleBtn    = document.getElementById("toggle-history");
+  const historyList  = document.getElementById("chat-history");
+  const chatWindow   = document.getElementById("chat-window");
+  const chatForm     = document.getElementById("chat-form");
+  const chatInput    = document.getElementById("chat-input");
 
   function renderHistory() {
     historyList.innerHTML = "";
     history.forEach((turn, idx) => {
       const li = document.createElement("li");
-      li.className = "list-group-item list-group-item-action";
       li.textContent = (turn.role === "user" ? "You: " : "AI: ")
         + turn.content.slice(0, 30) + "…";
       li.addEventListener("click", () => renderChatUpTo(idx));
@@ -81,56 +72,45 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function renderChatUpTo(index = history.length - 1) {
+  function renderChatUpTo(idx = history.length - 1) {
     chatWindow.innerHTML = "";
-    for (let i = 0; i <= index; i++) {
-      const turn = history[i];
-      const div  = document.createElement("div");
-      div.classList.add("p-2","mb-2","rounded",
-        turn.role === "user" ? "bg-primary text-white ms-auto" : "bg-light text-dark");
-      div.style.maxWidth = "75%";
-      div.textContent = turn.content;
-      chatWindow.appendChild(div);
-    }
+    history.slice(0, idx + 1).forEach(turn => {
+      const bubble = document.createElement("div");
+      bubble.className = `bubble ${turn.role}`;
+      bubble.textContent = turn.content;
+      chatWindow.appendChild(bubble);
+    });
     chatWindow.scrollTop = chatWindow.scrollHeight;
   }
 
-  // initial render
   renderHistory();
   renderChatUpTo();
 
-  // toggle collapse
   toggleBtn.addEventListener("click", () =>
-    document.querySelector(".col-lg-4").classList.toggle("d-none")
+    historyPanel.classList.toggle("collapsed")
   );
 
-  // handle form
-  document.getElementById("chat-form").addEventListener("submit", async e => {
+  chatForm.addEventListener("submit", async e => {
     e.preventDefault();
-    const question = document.getElementById("chat-input").value.trim();
-    if (!question) return;
-
-    history.push({ role: "user", content: question });
+    const q = chatInput.value.trim();
+    if (!q) return;
+    history.push({ role: "user", content: q });
     localStorage.setItem(historyKey, JSON.stringify(history));
-    renderHistory();
-    renderChatUpTo();
+    renderHistory(); renderChatUpTo();
+    chatInput.value = "";
 
-    document.getElementById("chat-input").value = "";
-
-    const resp = await fetch(apiUrl, {
+    const res = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-CSRFToken": "{{ csrf_token }}",
       },
-      body: JSON.stringify({ question })
+      body: JSON.stringify({ question: q })
     });
-    const { answer } = await resp.json();
-
+    const { answer } = await res.json();
     history.push({ role: "ai", content: answer });
     localStorage.setItem(historyKey, JSON.stringify(history));
-    renderHistory();
-    renderChatUpTo();
+    renderHistory(); renderChatUpTo();
   });
 });
 </script>
