@@ -20,6 +20,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django import forms
 from researcher_app.services.rag_service import RAGService
+from os.path import basename
 
 
 def parse_pdf_async(pdf_id, file_path):
@@ -404,13 +405,11 @@ def upload_page(request):
 
 
 def chat_page(request, pdf_id):
-    """
-    Renders the two-column Chat-with-PDF UI.
-    """
     pdf = get_object_or_404(UploadedPDF, pk=pdf_id)
+    title = basename(pdf.file.name)      # strip the “uploads/” prefix
     return render(request, 'chat_with_pdf.html', {
         'pdf_id': pdf_id,
-        'pdf_title': filename,
+        'pdf_title': title,
     })
 
 
