@@ -26,6 +26,7 @@
     <div id="postUploadActions" class="fade-in" style="display:none;">
       <h3>Next Actions</h3>
       <div class="action-buttons">
+        <!-- Updated to point at the Chat UI -->
         <a id="chatLink"   class="action-btn" target="_blank" rel="noopener">Chat with PDF <span class="new-tab">↗</span></a>
         <a id="blogLink"   class="action-btn" target="_blank" rel="noopener">Make a Blog <span class="new-tab">↗</span></a>
         <a id="pptLink"    class="action-btn" target="_blank" rel="noopener">Make a PPT <span class="new-tab">↗</span></a>
@@ -35,7 +36,6 @@
   </div>
 </div>
 {% endblock %}
-
 
 {% block extra_scripts %}
 <script src="https://mozilla.github.io/pdf.js/build/pdf.js"></script>
@@ -178,6 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Show action links with correct hrefs
   function showPostUploadActions() {
     postUploadActions.style.display = 'block';
+    // ← here we set the Chat UI URL
     document.getElementById('chatLink').href   = `/chat/${uploadedPdfId}/`;
     document.getElementById('blogLink').href   = `/blog/new/${uploadedPdfId}/`;
     document.getElementById('pptLink').href    = `/ppt/${uploadedPdfId}/`;
