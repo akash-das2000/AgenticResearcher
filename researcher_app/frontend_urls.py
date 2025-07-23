@@ -19,7 +19,7 @@ urlpatterns = [
 
     # Frontend pages
     path('upload/', upload_page, name='upload'),
-    path('chat/<int:pk>/', chat_page, name='chat'),
+    path('chat/<int:pdf_id>/', chat_page, name='chat-page'),
 
     # ——— Blog Creation Flow ———
     # 1) Kick off outline generation (opens in new tab if you add target="_blank")
