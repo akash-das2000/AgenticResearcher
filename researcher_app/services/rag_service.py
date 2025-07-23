@@ -11,17 +11,16 @@ import faiss
 import tiktoken
 import pandas as pd
 
-from django.conf import settings
 from google import genai
 from google.genai import types
 
-from .models import ExtractedContent
+from researcher_app.models import ExtractedContent   # ← fixed import
 
 # -----------------------------------------------------------------------------
-# Configuration: endpoints & API keys from settings.py
+# Configuration: read from ENV VARS
 # -----------------------------------------------------------------------------
-TEXT_EMBED_URL  = os.environ["CLIP_TEXT_EMBED_URL"]    # e.g. https://…/embed/text
-IMAGE_EMBED_URL = os.environ["CLIP_IMAGE_EMBED_URL"]   # e.g. https://…/embed/image
+TEXT_EMBED_URL  = os.environ["CLIP_TEXT_EMBED_URL"]
+IMAGE_EMBED_URL = os.environ["CLIP_IMAGE_EMBED_URL"]
 EMBED_HEADERS   = {"Content-Type": "application/json"}
 
 GEMINI_API_KEY  = os.environ["GEMINI_API_KEY"]
@@ -49,7 +48,6 @@ def embed_text_chunks(chunks):
     return resp.json()["embeddings"]
 
 def embed_image(path_or_url):
-    # support local path or remote URL
     if path_or_url.startswith("http://") or path_or_url.startswith("https://"):
         bts = requests.get(path_or_url).content
     else:
@@ -74,59 +72,35 @@ class RAGService:
     def __init__(self, pdf_id):
         ec = ExtractedContent.objects.get(uploaded_pdf_id=pdf_id)
         self.full_text    = ec.text
-        self.image_items  = ec.images   # expected JSON list of {"page":…, "url":…}
-        self.table_items  = ec.tables   # expected JSON list of {"page":…, "url":…}
+        self.image_items  = ec.images
+        self.table_items  = ec.tables
         self.index        = None
         self.metadatas    = []
 
     def build_index(self):
-        # 1) Chunk text
         text_chunks = chunk_text(self.full_text)
 
-        # 2) Prepare table snippets
         table_chunks = []
         for tbl in self.table_items:
             df = pd.read_csv(tbl["url"])
-            if not df.empty:
-                snippet = df.head(5).to_json(orient="records")
-            else:
-                cols = list(df.columns)
-                snippet = json.dumps({"columns": cols})
-            table_chunks.append({
-                "content": f"Table p{tbl['page']}: {snippet}",
-                "page": tbl["page"],
-                "url":   tbl["url"]
-            })
+            snippet = df.head(5).to_json(orient="records") if not df.empty else json.dumps({"columns": list(df.columns)})
+            table_chunks.append({"content": f"Table p{tbl['page']}: {snippet}", "page": tbl["page"], "url": tbl["url"]})
 
-        # 3) Embed everything
         text_vecs  = embed_text_chunks(text_chunks)
         table_vecs = embed_text_chunks([t["content"] for t in table_chunks])
         image_vecs = [embed_image(img["url"]) for img in self.image_items]
 
-        # 4) Build metadata list
         self.metadatas = []
         for c in text_chunks:
             self.metadatas.append({"type":"text","content":c})
         for t in table_chunks:
-            self.metadatas.append({
-                "type":"table",
-                "content":t["content"],
-                "page":   t["page"],
-                "url":     t["url"]
-            })
+            self.metadatas.append({"type":"table","content":t["content"],"page":t["page"],"url":t["url"]})
         for img in self.image_items:
-            self.metadatas.append({
-                "type":"image",
-                "page": img["page"],
-                "url":   img["url"]
-            })
+            self.metadatas.append({"type":"image","page":img["page"],"url":img["url"]})
 
-        # 5) Build FAISS index
-        all_vecs = np.vstack([
-            np.array(text_vecs,  dtype="float32"),
-            np.array(table_vecs, dtype="float32"),
-            np.array(image_vecs, dtype="float32"),
-        ])
+        all_vecs = np.vstack([np.array(text_vecs, dtype="float32"),
+                              np.array(table_vecs, dtype="float32"),
+                              np.array(image_vecs, dtype="float32")])
         dim = all_vecs.shape[1]
         idx = faiss.IndexFlatL2(dim)
         idx.add(all_vecs)
@@ -134,35 +108,24 @@ class RAGService:
 
     def retrieve(self, query, k=3):
         mode, num = detect_modality(query)
-        # embed query
         qv, = embed_text_chunks([query])
         D, I = self.index.search(np.array([qv],dtype="float32"), k*5)
-        raw = [{"distance": float(D[0][i]), **self.metadatas[idx]} 
-               for i, idx in enumerate(I[0])]
+        raw = [{"distance": float(D[0][i]), **self.metadatas[idx]} for i, idx in enumerate(I[0])]
 
-        # figure-specific
         if mode == "figure":
-            text_hits = [
-                h for h in raw if h["type"]=="text" 
-                and re.search(fr'\bfig(?:ure)?\.?\s*{num}\b', h["content"], re.I)
-            ][:k]
+            hits = [h for h in raw if h["type"]=="text" and re.search(fr'\bfig(?:ure)?\.?\s*{num}\b', h["content"], re.I)][:k]
             if 1 <= num <= len(self.image_items):
                 img = self.image_items[num-1]
-                return text_hits + [{"type":"image","page":img["page"],"url":img["url"]}]
-            return text_hits
+                hits.append({"type":"image","page":img["page"],"url":img["url"]})
+            return hits
 
-        # table-specific
         if mode == "table":
-            text_hits = [
-                h for h in raw if h["type"]=="text" 
-                and re.search(fr'\btable\.?\s*{num}\b', h["content"], re.I)
-            ][:k]
+            hits = [h for h in raw if h["type"]=="text" and re.search(fr'\btable\.?\s*{num}\b', h["content"], re.I)][:k]
             if 1 <= num <= len(self.table_items):
                 tbl = self.table_items[num-1]
-                return text_hits + [{"type":"table","page":tbl["page"],"url":tbl["url"]}]
-            return text_hits
+                hits.append({"type":"table","page":tbl["page"],"url":tbl["url"]})
+            return hits
 
-        # mixed/general
         return raw[:k]
 
     def ask_gemini(self, hits, question):
@@ -175,12 +138,9 @@ class RAGService:
                 md = df.head(5).to_markdown(index=False)
                 contents.append(f"Table (p{h['page']}):\n{md}\n")
             elif h["type"] == "image":
-                # read and attach binary
                 resp = requests.get(h["url"])
                 contents.append(types.Part.from_bytes(data=resp.content, mime_type="image/png"))
 
         contents.append(f"QUESTION: {question}")
-        resp = gemini_client.models.generate_content(
-            model="gemini-2.0-flash", contents=contents
-        )
+        resp = gemini_client.models.generate_content(model="gemini-2.0-flash", contents=contents)
         return resp.text
