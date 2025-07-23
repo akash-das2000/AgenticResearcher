@@ -2,43 +2,58 @@
 {% extends "base.html" %}
 {% load static %}
 
+{# Pull in your chat-specific CSS #}
 {% block extra_styles %}
 <link rel="stylesheet" href="{% static 'css/chat_with_pdf.css' %}">
 {% endblock %}
 
-{% block content %}
-  <div class="chat-container">
-    <!-- Left: Chat History -->
-    <aside id="history-panel">
-      <div id="history-header">
-        <h3>Chat History</h3>
-        <button id="toggle-history">⮜</button>
-      </div>
-      <ul id="chat-history">
-        <!-- populated by JS -->
-      </ul>
-    </aside>
+{# Suppress the site-wide footer #}
+{% block footer %}{% endblock %}
 
-    <!-- Right: Chat Interface -->
-    <main class="chat-main">
-      <div class="chat-header">
-        Chat with PDF: <strong>{{ pdf_title }}</strong>
+{% block content %}
+<div class="container my-5">
+  <div class="row">
+    {# Left column: chat history #}
+    <div class="col-lg-4 mb-4">
+      <div class="card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Chat History</h5>
+          <button id="toggle-history" class="btn btn-sm btn-outline-secondary">
+            ⮜
+          </button>
+        </div>
+        <ul id="chat-history" class="list-group list-group-flush overflow-auto" style="max-height: 70vh;">
+          <!-- populated by JS -->
+        </ul>
       </div>
-      <div id="chat-window">
-        <!-- chat bubbles go here -->
+    </div>
+
+    {# Right column: active chat window #}
+    <div class="col-lg-8">
+      <div class="card h-100 d-flex flex-column">
+        <div class="card-header">
+          <strong>Chat with PDF:</strong> {{ pdf_title }}
+        </div>
+        <div id="chat-window" class="card-body flex-grow-1 overflow-auto">
+          <!-- chat bubbles go here -->
+        </div>
+        <div class="card-footer">
+          <form id="chat-form" class="d-flex">
+            {% csrf_token %}
+            <input
+              type="text"
+              id="chat-input"
+              class="form-control me-2"
+              placeholder="Ask something about this PDF…"
+              autocomplete="off"
+            />
+            <button type="submit" id="send-btn" class="btn btn-primary">Send</button>
+          </form>
+        </div>
       </div>
-      <form id="chat-form">
-        {% csrf_token %}
-        <input
-          type="text"
-          id="chat-input"
-          placeholder="Ask something about this PDF…"
-          autocomplete="off"
-        />
-        <button type="submit" id="send-btn">Send</button>
-      </form>
-    </main>
+    </div>
   </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -48,17 +63,75 @@ document.addEventListener("DOMContentLoaded", () => {
   const apiUrl     = `/api/chat/pdf/${pdfId}/`;
   const historyKey = `chatHistory_${pdfId}`;
 
-  // Load or initialize per-PDF history
   let history = JSON.parse(localStorage.getItem(historyKey) || "[]");
 
-  // Render functions…
-  // (your existing renderHistory, renderChatUpTo, toggle, etc.)
+  const historyList = document.getElementById("chat-history");
+  const chatWindow  = document.getElementById("chat-window");
+  const toggleBtn   = document.getElementById("toggle-history");
 
-  // On each new question/answer you already push into `history`
-  // and call localStorage.setItem(historyKey, …) — perfect!
+  function renderHistory() {
+    historyList.innerHTML = "";
+    history.forEach((turn, idx) => {
+      const li = document.createElement("li");
+      li.className = "list-group-item list-group-item-action";
+      li.textContent = (turn.role === "user" ? "You: " : "AI: ")
+        + turn.content.slice(0, 30) + "…";
+      li.addEventListener("click", () => renderChatUpTo(idx));
+      historyList.appendChild(li);
+    });
+  }
 
-  // Because the key includes pdfId, uploading a *new* PDF
-  // (with a different ID) automatically gives you an empty cache.
+  function renderChatUpTo(index = history.length - 1) {
+    chatWindow.innerHTML = "";
+    for (let i = 0; i <= index; i++) {
+      const turn = history[i];
+      const div  = document.createElement("div");
+      div.classList.add("p-2","mb-2","rounded",
+        turn.role === "user" ? "bg-primary text-white ms-auto" : "bg-light text-dark");
+      div.style.maxWidth = "75%";
+      div.textContent = turn.content;
+      chatWindow.appendChild(div);
+    }
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+  }
+
+  // initial render
+  renderHistory();
+  renderChatUpTo();
+
+  // toggle collapse
+  toggleBtn.addEventListener("click", () =>
+    document.querySelector(".col-lg-4").classList.toggle("d-none")
+  );
+
+  // handle form
+  document.getElementById("chat-form").addEventListener("submit", async e => {
+    e.preventDefault();
+    const question = document.getElementById("chat-input").value.trim();
+    if (!question) return;
+
+    history.push({ role: "user", content: question });
+    localStorage.setItem(historyKey, JSON.stringify(history));
+    renderHistory();
+    renderChatUpTo();
+
+    document.getElementById("chat-input").value = "";
+
+    const resp = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": "{{ csrf_token }}",
+      },
+      body: JSON.stringify({ question })
+    });
+    const { answer } = await resp.json();
+
+    history.push({ role: "ai", content: answer });
+    localStorage.setItem(historyKey, JSON.stringify(history));
+    renderHistory();
+    renderChatUpTo();
+  });
 });
 </script>
 {% endblock %}
