@@ -9,27 +9,31 @@
 
 {% block content %}
 <div class="chat-container" id="chat-container">
-  <!-- History sidebar -->
+
+  <!-- HISTORY SIDEBAR -->
   <aside id="history-panel">
     <div id="history-header">
       <h3>Chat History</h3>
+      <!-- Toggle lives in the header now -->
+      <button id="toggle-history" class="toggle-btn">‹</button>
     </div>
     <ul id="chat-history"><!-- user questions --></ul>
   </aside>
 
-  <!-- Toggle button, outside the aside so it's always visible -->
-  <button id="toggle-history" class="toggle-btn">&lt;</button>
-
-  <!-- Chat area -->
+  <!-- CHAT AREA -->
   <section class="main-content">
     <div class="chat-header">
       Chat with PDF: <strong>{{ pdf_title }}</strong>
     </div>
-    <div id="chat-window"><!-- bubbles go here --></div>
+    <div id="chat-window"><!-- bubbles --></div>
     <form id="chat-form">
       {% csrf_token %}
-      <input id="chat-input" type="text"
-             placeholder="Ask something about this PDF…" autocomplete="off"/>
+      <input
+        id="chat-input"
+        type="text"
+        placeholder="Ask something about this PDF…"
+        autocomplete="off"
+      />
       <button id="send-btn" type="submit">Send</button>
     </form>
   </section>
@@ -43,7 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const apiUrl     = `/api/chat/pdf/${pdfId}/`;
   const historyKey = `chatHistory_${pdfId}`;
 
-  let fullHistory = JSON.parse(localStorage.getItem(historyKey) || "[]");
+  let fullHistory = JSON.parse(localStorage.getItem(historyKey)||"[]");
   let userIndices = fullHistory.map((h,i)=>h.role==="user"?i:-1).filter(i=>i>=0);
 
   const container   = document.getElementById("chat-container");
@@ -53,26 +57,26 @@ document.addEventListener("DOMContentLoaded", () => {
   const chatForm    = document.getElementById("chat-form");
   const chatInput   = document.getElementById("chat-input");
 
-  function saveHistory() {
-    localStorage.setItem(historyKey, JSON.stringify(fullHistory));
+  function saveHistory(){
+    localStorage.setItem(historyKey,JSON.stringify(fullHistory));
     userIndices = fullHistory.map((h,i)=>h.role==="user"?i:-1).filter(i=>i>=0);
   }
 
-  function renderHistory() {
-    historyList.innerHTML = "";
-    userIndices.forEach(fullIdx => {
-      const turn = fullHistory[fullIdx];
+  function renderHistory(){
+    historyList.innerHTML="";
+    userIndices.forEach(fullIdx=>{
+      const q = fullHistory[fullIdx].content;
       const li = document.createElement("li");
-      li.textContent = turn.content.slice(0,30) + "…";
-      const displayIdx = Math.min(fullIdx+1, fullHistory.length-1);
-      li.onclick = () => renderChatUpTo(displayIdx);
+      li.textContent = q.slice(0,30)+"…";
+      const showUpTo = Math.min(fullIdx+1, fullHistory.length-1);
+      li.onclick = ()=> renderChatUpTo(showUpTo);
       historyList.appendChild(li);
     });
   }
 
-  function renderChatUpTo(lastIdx = fullHistory.length-1) {
-    chatWindow.innerHTML = "";
-    for(let i=0; i<=lastIdx; i++){
+  function renderChatUpTo(idx=fullHistory.length-1){
+    chatWindow.innerHTML="";
+    for(let i=0;i<=idx;i++){
       const t = fullHistory[i];
       const b = document.createElement("div");
       b.classList.add("bubble", t.role);
@@ -82,22 +86,19 @@ document.addEventListener("DOMContentLoaded", () => {
     chatWindow.scrollTop = chatWindow.scrollHeight;
   }
 
-  renderHistory();
-  renderChatUpTo();
+  renderHistory(); renderChatUpTo();
 
-  toggleBtn.addEventListener("click", () => {
+  toggleBtn.addEventListener("click", ()=>{
     const isCollapsed = container.classList.toggle("collapsed");
     toggleBtn.textContent = isCollapsed ? "›" : "‹";
   });
 
-  chatForm.addEventListener("submit", async e => {
+  chatForm.addEventListener("submit", async e=>{
     e.preventDefault();
-    const q = chatInput.value.trim();
-    if (!q) return;
-
+    const q = chatInput.value.trim(); if(!q) return;
     fullHistory.push({role:"user",content:q});
     saveHistory(); renderHistory(); renderChatUpTo();
-    chatInput.value = "";
+    chatInput.value="";
 
     const res = await fetch(apiUrl, {
       method:"POST",
