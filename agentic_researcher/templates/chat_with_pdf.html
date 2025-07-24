@@ -9,25 +9,27 @@
 
 {% block content %}
 <div class="chat-container" id="chat-container">
-  <!-- LEFT: History panel -->
+  <!-- History sidebar -->
   <aside id="history-panel">
     <div id="history-header">
       <h3>Chat History</h3>
-      <!-- Minimalistic toggle button -->
-      <button id="toggle-history" class="toggle-btn">&lt;</button>
     </div>
-    <ul id="chat-history"><!-- only user questions --></ul>
+    <ul id="chat-history"><!-- user questions --></ul>
   </aside>
 
-  <!-- RIGHT: Chat area -->
+  <!-- Toggle button, outside the aside so it's always visible -->
+  <button id="toggle-history" class="toggle-btn">&lt;</button>
+
+  <!-- Chat area -->
   <section class="main-content">
     <div class="chat-header">
       Chat with PDF: <strong>{{ pdf_title }}</strong>
     </div>
-    <div id="chat-window"><!-- bubbles --></div>
+    <div id="chat-window"><!-- bubbles go here --></div>
     <form id="chat-form">
       {% csrf_token %}
-      <input id="chat-input" type="text" placeholder="Ask something about this PDF…" autocomplete="off"/>
+      <input id="chat-input" type="text"
+             placeholder="Ask something about this PDF…" autocomplete="off"/>
       <button id="send-btn" type="submit">Send</button>
     </form>
   </section>
@@ -41,8 +43,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const apiUrl     = `/api/chat/pdf/${pdfId}/`;
   const historyKey = `chatHistory_${pdfId}`;
 
-  let fullHistory  = JSON.parse(localStorage.getItem(historyKey) || "[]");
-  let userIndices  = fullHistory.map((h,i)=>h.role==="user"?i:-1).filter(i=>i>=0);
+  let fullHistory = JSON.parse(localStorage.getItem(historyKey) || "[]");
+  let userIndices = fullHistory.map((h,i)=>h.role==="user"?i:-1).filter(i=>i>=0);
 
   const container   = document.getElementById("chat-container");
   const toggleBtn   = document.getElementById("toggle-history");
@@ -70,11 +72,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderChatUpTo(lastIdx = fullHistory.length-1) {
     chatWindow.innerHTML = "";
-    for(let i=0;i<=lastIdx;i++){
-      const turn = fullHistory[i];
+    for(let i=0; i<=lastIdx; i++){
+      const t = fullHistory[i];
       const b = document.createElement("div");
-      b.classList.add("bubble", turn.role);
-      b.textContent = turn.content;
+      b.classList.add("bubble", t.role);
+      b.textContent = t.content;
       chatWindow.appendChild(b);
     }
     chatWindow.scrollTop = chatWindow.scrollHeight;
@@ -84,14 +86,15 @@ document.addEventListener("DOMContentLoaded", () => {
   renderChatUpTo();
 
   toggleBtn.addEventListener("click", () => {
-    container.classList.toggle("collapsed");
-    toggleBtn.textContent = container.classList.contains("collapsed") ? "›" : "‹";
+    const isCollapsed = container.classList.toggle("collapsed");
+    toggleBtn.textContent = isCollapsed ? "›" : "‹";
   });
 
   chatForm.addEventListener("submit", async e => {
     e.preventDefault();
     const q = chatInput.value.trim();
-    if(!q) return;
+    if (!q) return;
+
     fullHistory.push({role:"user",content:q});
     saveHistory(); renderHistory(); renderChatUpTo();
     chatInput.value = "";
