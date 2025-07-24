@@ -7,11 +7,12 @@
   overflow: hidden;
   transition: grid-template-columns .2s;
 }
+/* Collapse to a 30px “peek” strip */
 .chat-container.collapsed {
   grid-template-columns: 30px 1fr;
 }
 
-/* ─── History panel ───────────────────────────────────────────────────────── */
+/* ─── History sidebar ───────────────────────────────────────────────────────── */
 #history-panel {
   background: #f4f4f4;
   border-right: 1px solid #ccc;
@@ -19,33 +20,35 @@
   flex-direction: column;
   padding: 1rem;
   overflow-y: auto;
-  transition: padding .2s, opacity .2s;
+  transition: padding .2s;
 }
+/* Narrow padding when collapsed */
 .chat-container.collapsed #history-panel {
   padding: .5rem 0;
 }
+/* Hide title & list on collapse */
 .chat-container.collapsed #history-header h3,
 .chat-container.collapsed #chat-history {
   display: none;
 }
 
-/* ─── History header & toggle ────────────────────────────────────────────── */
-#history-header {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 1rem;
-}
-#history-header h3 {
-  margin: 0;
-  font-size: 1.1rem;
-}
+/* ─── Toggle button ────────────────────────────────────────────────────────── */
 .toggle-btn {
   position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translate(50%, -50%);
+  top: calc(81px + 1rem); /* 1rem down from the top of navbar */
+  /* Expanded: border at 20% */
+}
+.chat-container:not(.collapsed) .toggle-btn {
+  left: 20%;
+  transform: translateX(-50%);
+}
+/* Collapsed: border at 30px */
+.chat-container.collapsed .toggle-btn {
+  left: 30px;
+  transform: translateX(-50%) rotate(180deg);
+}
+
+.toggle-btn {
   background: none;
   border: none;
   padding: 0;
@@ -58,7 +61,15 @@
   text-decoration: underline;
 }
 
-/* ─── History list ────────────────────────────────────────────────────────── */
+/* ─── History header & list ───────────────────────────────────────────────── */
+#history-header {
+  margin-bottom: 1rem;
+  text-align: center;
+}
+#history-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
 #chat-history {
   list-style: none;
   padding: 0;
@@ -130,10 +141,10 @@
   background: #28a745;
   border: none;
   padding: 0 .75rem;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
 }
 #send-btn svg {
   width: 1.2rem;
@@ -141,5 +152,5 @@
   fill: #fff;
 }
 #send-btn:hover svg {
-  opacity: 0.8;
+  opacity: .8;
 }
