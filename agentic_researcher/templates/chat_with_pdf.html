@@ -13,31 +13,21 @@
   <aside id="history-panel">
     <div id="history-header">
       <h3>Chat History</h3>
+      <!-- Minimalistic toggle button -->
+      <button id="toggle-history" class="toggle-btn">&lt;</button>
     </div>
-    <ul id="chat-history">
-      <!-- only user questions will be listed -->
-    </ul>
+    <ul id="chat-history"><!-- only user questions --></ul>
   </aside>
-
-  <!-- TOGGLE BUTTON -->
-  <button id="toggle-history" class="history-toggle">⮜</button>
 
   <!-- RIGHT: Chat area -->
   <section class="main-content">
     <div class="chat-header">
       Chat with PDF: <strong>{{ pdf_title }}</strong>
     </div>
-    <div id="chat-window">
-      <!-- bubbles go here -->
-    </div>
+    <div id="chat-window"><!-- bubbles --></div>
     <form id="chat-form">
       {% csrf_token %}
-      <input
-        id="chat-input"
-        type="text"
-        placeholder="Ask something about this PDF…"
-        autocomplete="off"
-      />
+      <input id="chat-input" type="text" placeholder="Ask something about this PDF…" autocomplete="off"/>
       <button id="send-btn" type="submit">Send</button>
     </form>
   </section>
@@ -51,67 +41,58 @@ document.addEventListener("DOMContentLoaded", () => {
   const apiUrl     = `/api/chat/pdf/${pdfId}/`;
   const historyKey = `chatHistory_${pdfId}`;
 
-  let fullHistory = JSON.parse(localStorage.getItem(historyKey) || "[]");
-  let userIndices = fullHistory
-    .map((h,i) => h.role==="user" ? i : -1)
-    .filter(i => i>=0);
+  let fullHistory  = JSON.parse(localStorage.getItem(historyKey) || "[]");
+  let userIndices  = fullHistory.map((h,i)=>h.role==="user"?i:-1).filter(i=>i>=0);
 
-  const container    = document.getElementById("chat-container");
-  const panel        = document.getElementById("history-panel");
-  const toggleBtn    = document.getElementById("toggle-history");
-  const historyList  = document.getElementById("chat-history");
-  const chatWindow   = document.getElementById("chat-window");
-  const chatForm     = document.getElementById("chat-form");
-  const chatInput    = document.getElementById("chat-input");
+  const container   = document.getElementById("chat-container");
+  const toggleBtn   = document.getElementById("toggle-history");
+  const historyList = document.getElementById("chat-history");
+  const chatWindow  = document.getElementById("chat-window");
+  const chatForm    = document.getElementById("chat-form");
+  const chatInput   = document.getElementById("chat-input");
 
   function saveHistory() {
     localStorage.setItem(historyKey, JSON.stringify(fullHistory));
-    userIndices = fullHistory
-      .map((h,i) => h.role==="user" ? i : -1)
-      .filter(i => i>=0);
+    userIndices = fullHistory.map((h,i)=>h.role==="user"?i:-1).filter(i=>i>=0);
   }
 
   function renderHistory() {
     historyList.innerHTML = "";
     userIndices.forEach(fullIdx => {
       const turn = fullHistory[fullIdx];
-      const li   = document.createElement("li");
+      const li = document.createElement("li");
       li.textContent = turn.content.slice(0,30) + "…";
-      // show question + its answer (if exists)
-      const displayIdx = Math.min(fullIdx + 1, fullHistory.length - 1);
-      li.addEventListener("click", () => renderChatUpTo(displayIdx));
+      const displayIdx = Math.min(fullIdx+1, fullHistory.length-1);
+      li.onclick = () => renderChatUpTo(displayIdx);
       historyList.appendChild(li);
     });
   }
 
-  function renderChatUpTo(lastIdx = fullHistory.length - 1) {
+  function renderChatUpTo(lastIdx = fullHistory.length-1) {
     chatWindow.innerHTML = "";
-    for (let i=0; i<= lastIdx; i++) {
-      const t = fullHistory[i];
+    for(let i=0;i<=lastIdx;i++){
+      const turn = fullHistory[i];
       const b = document.createElement("div");
-      b.classList.add("bubble", t.role);
-      b.textContent = t.content;
+      b.classList.add("bubble", turn.role);
+      b.textContent = turn.content;
       chatWindow.appendChild(b);
     }
     chatWindow.scrollTop = chatWindow.scrollHeight;
   }
 
-  // initial render
   renderHistory();
   renderChatUpTo();
 
-  // toggle sidebar
   toggleBtn.addEventListener("click", () => {
     container.classList.toggle("collapsed");
+    toggleBtn.textContent = container.classList.contains("collapsed") ? "›" : "‹";
   });
 
-  // send question
   chatForm.addEventListener("submit", async e => {
     e.preventDefault();
     const q = chatInput.value.trim();
-    if (!q) return;
-
-    fullHistory.push({role:"user", content:q});
+    if(!q) return;
+    fullHistory.push({role:"user",content:q});
     saveHistory(); renderHistory(); renderChatUpTo();
     chatInput.value = "";
 
@@ -123,9 +104,8 @@ document.addEventListener("DOMContentLoaded", () => {
       },
       body: JSON.stringify({question:q})
     });
-    const { answer = "❌ Error" } = await res.json();
-
-    fullHistory.push({role:"ai", content:answer});
+    const { answer="❌ Error" } = await res.json();
+    fullHistory.push({role:"ai",content:answer});
     saveHistory(); renderHistory(); renderChatUpTo();
   });
 });
