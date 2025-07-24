@@ -1,8 +1,7 @@
-# researcher_app/services/rag_service.py
-
 import os
-import json
+import io
 import re
+import json
 import base64
 import requests
 import numpy as np
@@ -20,8 +19,8 @@ TEXT_EMBED_URL  = os.environ["CLIP_TEXT_EMBED_URL"]
 IMAGE_EMBED_URL = os.environ["CLIP_IMAGE_EMBED_URL"]
 GEMINI_API_KEY  = os.environ["GEMINI_API_KEY"]
 
-EMBED_HEADERS = {"Content-Type": "application/json"}
-gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+EMBED_HEADERS   = {"Content-Type": "application/json"}
+gemini_client   = genai.Client(api_key=GEMINI_API_KEY)
 
 # ─── TOKENIZER & CHUNKING ─────────────────────────────────────────────────────
 tokenizer = tiktoken.get_encoding("cl100k_base")
@@ -49,26 +48,26 @@ def embed_image(path_or_url):
     resp.raise_for_status()
     return resp.json()["embeddings"][0]
 
-# ─── SIMPLE MODALITY DETECTION ────────────────────────────────────────────────
+# ─── MODALITY DETECTION ───────────────────────────────────────────────────────
 def detect_modality(query):
     if m := re.search(r'\bfig(?:ure)?\.?\s*(\d+)\b', query, re.I):
         return "figure", int(m.group(1))
-    if m := re.search(r'\btable\.?\s*(\d+)\b', query, re.I):
+    if m := re.search(r'\btable\.?\s*(\d+)\b',   query, re.I):
         return "table", int(m.group(1))
     return "mixed", None
 
 # ─── RAG SERVICE ───────────────────────────────────────────────────────────────
 class RAGService:
     def __init__(self, pdf_id):
-        # reference to the extracted content
         ec = ExtractedContent.objects.get(pdf__id=pdf_id)
         self.full_text   = ec.text
-        self.table_items = ec.tables
-        self.image_items = ec.images
+        self.table_items = ec.tables    # list of dicts
+        self.image_items = ec.images    # list of dicts
 
-        # where we’ll persist the FAISS index + metadata
-        self.index_path = os.path.join(settings.MEDIA_ROOT, "indices", f"pdf_{pdf_id}.faiss")
-        os.makedirs(os.path.dirname(self.index_path), exist_ok=True)
+        # persistence paths
+        idx_dir = os.path.join(settings.MEDIA_ROOT, "indices")
+        os.makedirs(idx_dir, exist_ok=True)
+        self.index_path = os.path.join(idx_dir, f"pdf_{pdf_id}.faiss")
 
         self.index     = None
         self.metadatas = None
@@ -77,128 +76,135 @@ class RAGService:
         return os.path.isfile(self.index_path)
 
     def build_index(self, persist=False):
-        # 1) chunk & embed text
+        # ─── Text chunks ─────────────────────────────────────────────
         text_chunks = chunk_text(self.full_text)
         text_vecs   = embed_text_chunks(text_chunks)
 
-        # 2) prepare & embed tables
+        # ─── Table chunks ────────────────────────────────────────────
         table_chunks = []
         for tbl in self.table_items:
-            df = pd.read_csv(tbl["url"])
+            # Try url → path → inline data
+            path = tbl.get("url") or tbl.get("path")
+            if path:
+                df = pd.read_csv(path)
+            else:
+                raw = tbl.get("data") or tbl.get("csv")
+                if raw:
+                    df = pd.read_csv(io.StringIO(raw))
+                else:
+                    # skip if no data source
+                    continue
+
             snippet = (
                 df.head(5).to_json(orient="records")
                 if not df.empty
                 else json.dumps({"columns": list(df.columns)})
             )
             table_chunks.append({
-                "content": f"Table p{tbl['page']}: {snippet}",
-                "page": tbl["page"],
-                "url": tbl["url"]
+                "content": f"Table p{tbl.get('page','?')}: {snippet}",
+                "page":    tbl.get("page"),
+                "url":     path  # may be None if inline
             })
-        table_vecs = embed_text_chunks([t["content"] for t in table_chunks])
 
-        # 3) embed images
-        image_vecs = [embed_image(img["url"]) for img in self.image_items]
+        table_vecs = (
+            embed_text_chunks([t["content"] for t in table_chunks])
+            if table_chunks else []
+        )
 
-        # 4) assemble metadata array
-        metadatas = []
+        # ─── Image chunks ────────────────────────────────────────────
+        image_vecs = [
+            embed_image(img.get("url") or img.get("path"))
+            for img in self.image_items
+            if img.get("url") or img.get("path")
+        ]
+
+        # ─── Assemble metadata & vectors ────────────────────────────
+        self.metadatas = []
         for c in text_chunks:
-            metadatas.append({"type": "text",  "content": c})
+            self.metadatas.append({"type":"text", "content":c})
         for t in table_chunks:
-            metadatas.append({
-                "type":    "table",
-                "content": t["content"],
-                "page":    t["page"],
-                "url":     t["url"]
+            self.metadatas.append({
+                "type":"table",
+                "content":t["content"],
+                "page":   t["page"],
+                "url":    t["url"]
             })
         for img in self.image_items:
-            metadatas.append({
-                "type": "image",
-                "page": img["page"],
-                "url":  img["url"]
+            self.metadatas.append({
+                "type":"image",
+                "page": img.get("page"),
+                "url":  img.get("url")
             })
-        self.metadatas = metadatas
 
-        # 5) build FAISS vector index
         all_vecs = np.vstack([
             np.array(text_vecs,  dtype="float32"),
-            np.array(table_vecs, dtype="float32"),
-            np.array(image_vecs, dtype="float32"),
+            np.array(table_vecs, dtype="float32") if table_vecs else np.empty((0,len(text_vecs[0]))),
+            np.array(image_vecs, dtype="float32") if image_vecs else np.empty((0,len(text_vecs[0])))
         ])
+
         idx = faiss.IndexFlatL2(all_vecs.shape[1])
         idx.add(all_vecs)
         self.index = idx
 
-        # 6) optionally persist to disk
         if persist:
             faiss.write_index(idx, self.index_path)
             with open(self.index_path + ".meta", "w") as f:
                 json.dump(self.metadatas, f)
 
     def _load_index(self):
-        # load FAISS index + metadata from disk
-        idx = faiss.read_index(self.index_path)
+        self.index = faiss.read_index(self.index_path)
         with open(self.index_path + ".meta") as f:
-            metas = json.load(f)
-        self.index     = idx
-        self.metadatas = metas
+            self.metadatas = json.load(f)
 
     def retrieve(self, query, k=3):
-        # lazy-load or (re)build the index
+        # lazy-load or build
         if self.index is None:
             if self.index_exists():
                 self._load_index()
             else:
                 self.build_index(persist=True)
 
-        # embed the query
         qv, = embed_text_chunks([query])
-        D, I = self.index.search(np.array([qv], dtype="float32"), k * 5)
+        D, I = self.index.search(np.array([qv], dtype="float32"), k*5)
 
-        # collect top k*5 hits with distances
-        raw = [
-            {"distance": float(D[0][i]), **self.metadatas[idx]}
-            for i, idx in enumerate(I[0])
-        ]
+        raw = []
+        for dist, idx in zip(D[0], I[0]):
+            if idx < len(self.metadatas):
+                raw.append({"distance": float(dist), **self.metadatas[idx]})
 
-        # apply simple modality filtering
         mode, num = detect_modality(query)
         if mode == "figure":
-            hits = [h for h in raw if h["type"]=="text" and re.search(fr'\bfig(?:ure)?\.?{num}\b', h["content"], re.I)][:k]
+            hits = [h for h in raw if h["type"]=="text" and re.search(fr'\bfig(?:ure)?\.?\s*{num}\b', h["content"], re.I)][:k]
             if 1 <= num <= len(self.image_items):
                 img = self.image_items[num-1]
-                hits.append({"type":"image","page":img["page"],"url":img["url"]})
+                hits.append({"type":"image","page":img.get("page"),"url":img.get("url")})
             return hits
 
         if mode == "table":
-            hits = [h for h in raw if h["type"]=="text" and re.search(fr'\btable\.?{num}\b', h["content"], re.I)][:k]
+            hits = [h for h in raw if h["type"]=="text" and re.search(fr'\btable\.?\s*{num}\b', h["content"], re.I)][:k]
             if 1 <= num <= len(self.table_items):
                 tbl = self.table_items[num-1]
-                hits.append({"type":"table","page":tbl["page"],"url":tbl["url"]})
+                hits.append({"type":"table","page":tbl.get("page"),"url":tbl.get("url")})
             return hits
 
-        # default: return top-k by distance
         return raw[:k]
 
     def ask_gemini(self, hits, question):
-        # assemble Gemini contents
         contents = ["You are a precise multimodal research assistant.\n"]
         for h in hits:
             if h["type"] == "text":
                 contents.append(f"[Text] {h['content']}\n")
             elif h["type"] == "table":
-                df = pd.read_csv(h["url"])
-                md = df.head(5).to_markdown(index=False)
-                contents.append(f"Table (p{h['page']}):\n{md}\n")
+                if h.get("url"):
+                    df = pd.read_csv(h["url"])
+                    contents.append(f"Table (p{h['page']}):\n{df.head(5).to_markdown(index=False)}\n")
             elif h["type"] == "image":
-                resp = requests.get(h["url"])
-                contents.append(types.Part.from_bytes(
-                    data=resp.content, mime_type="image/png"
-                ))
+                if h.get("url"):
+                    resp = requests.get(h["url"])
+                    contents.append(types.Part.from_bytes(data=resp.content, mime_type="image/png"))
         contents.append(f"QUESTION: {question}")
 
         resp = gemini_client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=contents
+            model="gemini-2.0-flash", contents=contents
         )
         return resp.text
