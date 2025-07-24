@@ -1,4 +1,4 @@
-/* ─── Overall container ───────────────────────────────────────────────────── */
+/* ─── Container ────────────────────────────────────────────────────────────── */
 .chat-container {
   position: fixed;
   top: 81px; bottom: 0; left: 0; right: 0;
@@ -19,11 +19,10 @@
   flex-direction: column;
   padding: 1rem;
   overflow-y: auto;
-  transition: opacity .2s;
+  transition: padding .2s, opacity .2s;
 }
-/* Hide list and title when collapsed, leave toggle visible */
 .chat-container.collapsed #history-panel {
-  padding: .5rem 0;    /* narrow padding */
+  padding: .5rem 0;
 }
 .chat-container.collapsed #history-header h3,
 .chat-container.collapsed #chat-history {
@@ -47,18 +46,19 @@
   right: 0;
   top: 50%;
   transform: translate(50%, -50%);
-  width: 1.6rem;
-  height: 1.6rem;
-  background: #000;
-  color: #fff;
+  background: none;
   border: none;
-  border-radius: 50%;
-  font-size: 1rem;
-  line-height: 1.6rem;
+  padding: 0;
+  margin: 0;
+  font-size: 1.2rem;
+  color: #000;
   cursor: pointer;
 }
+.toggle-btn:hover {
+  text-decoration: underline;
+}
 
-/* ─── History list ───────────────────────────────────────────────────────── */
+/* ─── History list ────────────────────────────────────────────────────────── */
 #chat-history {
   list-style: none;
   padding: 0;
@@ -127,10 +127,19 @@
 }
 #send-btn {
   margin-left: .5rem;
-  padding: .6rem 1.2rem;
   background: #28a745;
-  color: #fff;
   border: none;
-  border-radius: 4px;
+  padding: 0 .75rem;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#send-btn svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  fill: #fff;
+}
+#send-btn:hover svg {
+  opacity: 0.8;
 }
