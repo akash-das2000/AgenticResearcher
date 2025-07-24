@@ -1,3 +1,5 @@
+# researcher_app/services/rag_service.py
+
 import os
 import io
 import re
@@ -61,10 +63,10 @@ class RAGService:
     def __init__(self, pdf_id):
         ec = ExtractedContent.objects.get(pdf__id=pdf_id)
         self.full_text   = ec.text
-        self.table_items = ec.tables    # list of dicts
-        self.image_items = ec.images    # list of dicts
+        self.table_items = ec.tables
+        self.image_items = ec.images
 
-        # persistence paths
+        # persistence directory and paths
         idx_dir = os.path.join(settings.MEDIA_ROOT, "indices")
         os.makedirs(idx_dir, exist_ok=True)
         self.index_path = os.path.join(idx_dir, f"pdf_{pdf_id}.faiss")
@@ -83,17 +85,12 @@ class RAGService:
         # ─── Table chunks ────────────────────────────────────────────
         table_chunks = []
         for tbl in self.table_items:
-            # Try url → path → inline data
             path = tbl.get("url") or tbl.get("path")
             if path:
                 df = pd.read_csv(path)
             else:
                 raw = tbl.get("data") or tbl.get("csv")
-                if raw:
-                    df = pd.read_csv(io.StringIO(raw))
-                else:
-                    # skip if no data source
-                    continue
+                df = pd.read_csv(io.StringIO(raw)) if raw else pd.DataFrame()
 
             snippet = (
                 df.head(5).to_json(orient="records")
@@ -103,7 +100,7 @@ class RAGService:
             table_chunks.append({
                 "content": f"Table p{tbl.get('page','?')}: {snippet}",
                 "page":    tbl.get("page"),
-                "url":     path  # may be None if inline
+                "url":     path
             })
 
         table_vecs = (
@@ -138,8 +135,8 @@ class RAGService:
 
         all_vecs = np.vstack([
             np.array(text_vecs,  dtype="float32"),
-            np.array(table_vecs, dtype="float32") if table_vecs else np.empty((0,len(text_vecs[0]))),
-            np.array(image_vecs, dtype="float32") if image_vecs else np.empty((0,len(text_vecs[0])))
+            np.array(table_vecs, dtype="float32") if table_vecs else np.empty((0, len(text_vecs[0]))),
+            np.array(image_vecs, dtype="float32") if image_vecs else np.empty((0, len(text_vecs[0])))
         ])
 
         idx = faiss.IndexFlatL2(all_vecs.shape[1])
@@ -157,7 +154,6 @@ class RAGService:
             self.metadatas = json.load(f)
 
     def retrieve(self, query, k=3):
-        # lazy-load or build
         if self.index is None:
             if self.index_exists():
                 self._load_index()
@@ -174,14 +170,20 @@ class RAGService:
 
         mode, num = detect_modality(query)
         if mode == "figure":
-            hits = [h for h in raw if h["type"]=="text" and re.search(fr'\bfig(?:ure)?\.?\s*{num}\b', h["content"], re.I)][:k]
+            hits = [
+                h for h in raw
+                if h["type"]=="text" and re.search(fr'\bfig(?:ure)?\.?\s*{num}\b', h["content"], re.I)
+            ][:k]
             if 1 <= num <= len(self.image_items):
                 img = self.image_items[num-1]
                 hits.append({"type":"image","page":img.get("page"),"url":img.get("url")})
             return hits
 
         if mode == "table":
-            hits = [h for h in raw if h["type"]=="text" and re.search(fr'\btable\.?\s*{num}\b', h["content"], re.I)][:k]
+            hits = [
+                h for h in raw
+                if h["type"]=="text" and re.search(fr'\btable\.?\s*{num}\b', h["content"], re.I)
+            ][:k]
             if 1 <= num <= len(self.table_items):
                 tbl = self.table_items[num-1]
                 hits.append({"type":"table","page":tbl.get("page"),"url":tbl.get("url")})
@@ -197,11 +199,17 @@ class RAGService:
             elif h["type"] == "table":
                 if h.get("url"):
                     df = pd.read_csv(h["url"])
-                    contents.append(f"Table (p{h['page']}):\n{df.head(5).to_markdown(index=False)}\n")
+                    try:
+                        md = df.head(5).to_markdown(index=False)
+                    except ImportError:
+                        md = df.head(5).to_csv(index=False)
+                    contents.append(f"Table (p{h['page']}):\n{md}\n")
             elif h["type"] == "image":
                 if h.get("url"):
                     resp = requests.get(h["url"])
-                    contents.append(types.Part.from_bytes(data=resp.content, mime_type="image/png"))
+                    contents.append(types.Part.from_bytes(
+                        data=resp.content, mime_type="image/png"
+                    ))
         contents.append(f"QUESTION: {question}")
 
         resp = gemini_client.models.generate_content(
