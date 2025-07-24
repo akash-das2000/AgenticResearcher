@@ -26,18 +26,11 @@ from os.path import basename
 def parse_pdf_async(pdf_id, file_path):
     print(f"DEBUG: Background parsing for PDF {pdf_id}")
     try:
-        print(f"DEBUG: Starting extraction for {file_path}")
         result = pdf_extractor.extract_pdf(file_path)
-
-        print(
-            f"DEBUG: Extraction result - text len={len(result['text'])}, "
-            f"images={len(result['images'])}, tables={len(result['tables'])}"
-        )
+        print(f"DEBUG: Extraction result - text len={len(result['text'])}, "
+              f"images={len(result['images'])}, tables={len(result['tables'])}")
 
         pdf = UploadedPDF.objects.get(id=pdf_id)
-        print(f"DEBUG: PDF object found - {pdf}")
-
-        # ✅ Save extracted content
         ExtractedContent.objects.create(
             pdf=pdf,
             text=result['text'],
@@ -45,7 +38,11 @@ def parse_pdf_async(pdf_id, file_path):
             tables=result['tables']
         )
         print("✅ Saved extracted content to DB")
-        print(f"✅ Background parsing completed for PDF {pdf_id}")
+
+        # ── NEW: build & persist FAISS index once ──
+        svc = RAGService(pdf_id)
+        svc.build_index(persist=True)
+        print(f"✅ Built & cached FAISS index for PDF {pdf_id}")
 
     except Exception as e:
         print(f"❌ Background parsing failed for PDF {pdf_id}: {e}")
