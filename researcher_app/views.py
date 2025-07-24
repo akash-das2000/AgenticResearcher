@@ -27,7 +27,7 @@ from os.path import basename
 
 def parse_pdf_async(pdf_id, file_path):
     try:
-        # 1) extract text/images/tables
+        # 1) extract
         result = extract_pdf(file_path)
         pdf = UploadedPDF.objects.get(id=pdf_id)
         ExtractedContent.objects.create(
@@ -36,11 +36,12 @@ def parse_pdf_async(pdf_id, file_path):
             images=result["images"],
             tables=result["tables"],
         )
+        print("✅ Saved extracted content to DB")
 
-        # 2) build & persist FAISS index (only once)
+        # 2) build & persist index once
         svc = RAGService(pdf_id)
         svc.build_index(persist=True)
-        print(f"✅ Saved extracted content and built index for PDF {pdf_id}")
+        print(f"✅ Built & cached FAISS index for PDF {pdf_id}")
     except Exception as e:
         print(f"❌ parse_pdf_async failed for PDF {pdf_id}: {e}")
 
@@ -208,25 +209,19 @@ class MetaSectionView(APIView):
 
 
 class ChatWithPDFView(APIView):
-    """
-    POST /api/chat/pdf/<pdf_id>/
-    """
     def post(self, request, pdf_id):
         question = request.data.get("question", "").strip()
         if not question:
             return Response({"error": "No question provided."},
                             status=status.HTTP_400_BAD_REQUEST)
-
         try:
             svc    = RAGService(pdf_id)
-            hits   = svc.retrieve(question, k=3)      # lazy-load cached index
+            hits   = svc.retrieve(question, k=3)
             answer = svc.ask_gemini(hits, question)
             return Response({"answer": answer, "hits": hits})
         except Exception as e:
-            # log & surface any errors
             print(f"❌ Chat error for PDF {pdf_id}: {e}")
-            return Response({"error": str(e)},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class NormalizationRuleView(APIView):
