@@ -1,13 +1,15 @@
 /* ─── Container ────────────────────────────────────────────────────────────── */
 .chat-container {
   position: fixed;
-  top: 81px; bottom: 0; left: 0; right: 0;
+  top: 81px;
+  bottom: 0;
+  left: 0;
+  right: 0;
   display: grid;
   grid-template-columns: 20% 1fr;
   overflow: hidden;
   transition: grid-template-columns .2s;
 }
-/* collapse to a 60px peek */
 .chat-container.collapsed {
   grid-template-columns: 60px 1fr;
 }
@@ -25,7 +27,6 @@
 .chat-container.collapsed #history-panel {
   padding: .5rem 0;
 }
-/* hide the list & title, keep header */
 .chat-container.collapsed #history-header h3,
 .chat-container.collapsed #chat-history {
   display: none;
@@ -42,8 +43,6 @@
   margin: 0;
   font-size: 1.1rem;
 }
-
-/* toggle arrow button */
 .toggle-btn {
   background: none;
   border: none;
@@ -51,18 +50,22 @@
   color: #000;
   cursor: pointer;
   padding: 0;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 0;
+  transition: color .2s;
 }
-/* default left‐pointing arrow */
 .toggle-btn::after {
   content: '‹';
   display: inline-block;
-  transition: color .2s;
 }
-/* swap to right arrow when collapsed */
+.chat-container.collapsed .toggle-btn {
+  right: 8px; /* tuck in 8px from sidebar edge */
+}
 .chat-container.collapsed .toggle-btn::after {
   content: '›';
 }
-/* hover dim */
 .toggle-btn:hover::after {
   color: #555;
 }
@@ -124,6 +127,7 @@
 #chat-form {
   flex: none;
   display: flex;
+  align-items: center;
   padding: 1rem;
   border-top: 1px solid #ddd;
 }
@@ -133,24 +137,27 @@
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 1rem;
+  margin-right: .5rem; /* space before send button */
 }
 
-/* send‐button with chevron */
+/* refined send button */
 #send-btn {
   background-color: #007bff;
   border: none;
-  padding: 0 .75rem;
+  padding: .5rem .75rem; /* taller, more clickable */
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: 20px;   /* pill shape */
   cursor: pointer;
+  transition: background-color .2s, transform .1s;
+}
+#send-btn:hover {
+  background-color: #0056b3;
+  transform: translateY(-1px);
 }
 #send-btn svg {
   width: 1.2rem;
   height: 1.2rem;
   color: #fff;
-}
-#send-btn:hover svg {
-  opacity: .8;
 }
