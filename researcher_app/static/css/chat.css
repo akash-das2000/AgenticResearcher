@@ -1,23 +1,35 @@
-/* static/css/chat.css */
-
-/* ─── Full-height two-column grid ─── */
-html, body, .chat-container {
+/* ─── Full-Page Stretch Overrides ─── */
+html, body, main, .chat-container {
   height: 100%;
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
+
+/* ─── Body & Layout ─── */
+body {
+  display: flex;
+  flex-direction: column;
+  font-family: 'Segoe UI', sans-serif;
+}
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Chat Container (two-column) ─── */
 .chat-container {
   display: grid;
   grid-template-columns: 20% 1fr;
-  overflow: hidden;
+  overflow: hidden;   /* single scrollbar for each column */
 }
 
-/* ─── Sidebar: history ─── */
+/* ─── Left: Chat History Sidebar ─── */
 #history-panel {
   background: #f4f4f4;
-  border-right: 1px solid #ccc;
   padding: 1rem;
+  border-right: 1px solid #ccc;
   overflow-y: auto;
 }
 #history-panel.collapsed {
@@ -52,10 +64,11 @@ html, body, .chat-container {
   background: #e9e9e9;
 }
 
-/* ─── Main chat area ─── */
+/* ─── Right: Chat Area ─── */
 .main-content {
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 .chat-header {
   padding: 1rem;
@@ -72,6 +85,7 @@ html, body, .chat-container {
   margin-bottom: .75rem;
   padding: .6rem .8rem;
   border-radius: 12px;
+  word-wrap: break-word;
   line-height: 1.4;
 }
 .bubble.user {
@@ -85,7 +99,7 @@ html, body, .chat-container {
   align-self: flex-start;
 }
 
-/* ─── Input area ─── */
+/* ─── Input Form ─── */
 #chat-form {
   display: flex;
   padding: 1rem;
