@@ -1,6 +1,6 @@
 /* static/css/chat.css */
 
-/* ─── Layout ─── */
+/* ─── Full-height two-column grid ─── */
 html, body, .chat-container {
   height: 100%;
   margin: 0;
@@ -13,7 +13,7 @@ html, body, .chat-container {
   overflow: hidden;
 }
 
-/* ─── Sidebar: History ─── */
+/* ─── Sidebar: history ─── */
 #history-panel {
   background: #f4f4f4;
   border-right: 1px solid #ccc;
@@ -52,7 +52,7 @@ html, body, .chat-container {
   background: #e9e9e9;
 }
 
-/* ─── Main: Chat Window ─── */
+/* ─── Main chat area ─── */
 .main-content {
   display: flex;
   flex-direction: column;
@@ -85,7 +85,7 @@ html, body, .chat-container {
   align-self: flex-start;
 }
 
-/* ─── Input Area ─── */
+/* ─── Input area ─── */
 #chat-form {
   display: flex;
   padding: 1rem;
