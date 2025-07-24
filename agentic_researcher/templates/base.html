@@ -5,11 +5,11 @@
     <meta charset="UTF-8">
     <title>Agentic Researcher</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- your main site CSS -->
+    <!-- Main site CSS -->
     <link rel="stylesheet" href="{% static 'css/main.css' %}">
-    {# allow pages to inject extra CSS #}
+    {# Allow pages to inject extra CSS #}
     {% block extra_styles %}{% endblock %}
-    <!-- fonts, etc. -->
+    <!-- Webfonts -->
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -19,12 +19,10 @@
     </header>
 
     <main>
-        {% block content %}
-        <!-- Page-specific content goes here -->
-        {% endblock %}
+        {% block content %}{% endblock %}
     </main>
 
-    {# make footer a block so child templates can suppress it #}
+    {# Wrap footer in a block so pages can suppress it #}
     {% block footer %}
     <footer class="site-footer">
         <p>&copy; 2025 Agentic Researcher. All rights reserved.</p>
@@ -34,12 +32,10 @@
     <!-- PDF.js CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
-        window.pdfjsLib = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      window.pdfjsLib = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
 
-    {% block extra_scripts %}
-    <!-- Page-specific scripts will be injected here -->
-    {% endblock %}
+    {% block extra_scripts %}{% endblock %}
 </body>
 </html>
