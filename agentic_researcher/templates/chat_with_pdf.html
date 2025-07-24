@@ -1,43 +1,35 @@
 {% extends "base.html" %}
 {% load static %}
 
-{# 1. Load the chat-specific stylesheet #}
 {% block extra_styles %}
 <link rel="stylesheet" href="{% static 'css/chat.css' %}">
 {% endblock %}
 
-{# 2. Suppress the global footer on this page #}
 {% block footer %}{% endblock %}
 
 {% block content %}
 <div class="chat-container">
-  <!-- LEFT: chat history sidebar -->
+  <!-- LEFT: History -->
   <aside id="history-panel">
     <div id="history-header">
       <h3>Chat History</h3>
       <button id="toggle-history">⮜</button>
     </div>
-    <ul id="chat-history">
-      <!-- populated by JS -->
-    </ul>
+    <ul id="chat-history"><!-- JS fills this --></ul>
   </aside>
 
-  <!-- RIGHT: active chat panel -->
+  <!-- RIGHT: Chat UI -->
   <section class="main-content">
     <div class="chat-header">
       Chat with PDF: <strong>{{ pdf_title }}</strong>
     </div>
-    <div id="chat-window">
-      <!-- chat bubbles appear here -->
-    </div>
+    <div id="chat-window"><!-- bubbles go here --></div>
     <form id="chat-form">
       {% csrf_token %}
-      <input
-        id="chat-input"
-        type="text"
-        placeholder="Ask something about this PDF…"
-        autocomplete="off"
-      />
+      <input id="chat-input"
+             type="text"
+             placeholder="Ask something about this PDF…"
+             autocomplete="off" />
       <button id="send-btn" type="submit">Send</button>
     </form>
   </section>
@@ -64,7 +56,8 @@ document.addEventListener("DOMContentLoaded", () => {
     list.innerHTML = "";
     history.forEach((t,i) => {
       const li = document.createElement("li");
-      li.textContent = (t.role==="user"?"You: ":"AI: ") + t.content.slice(0,30) + "…";
+      li.textContent = (t.role==="user"?"You: ":"AI: ")
+                     + t.content.slice(0,30)+"…";
       li.onclick = () => renderUpTo(i);
       list.appendChild(li);
     });
