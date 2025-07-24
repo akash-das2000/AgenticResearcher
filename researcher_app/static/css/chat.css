@@ -1,13 +1,19 @@
-/* ─── Chat Container (full-viewport under header) ─── */
+/* static/css/chat.css */
+
+/* ─── Full-viewport two-column grid under the navbar ─── */
 .chat-container {
   position: fixed;
-  top: 81px;       /* match your header height */
+  top: 81px;     /* match your header height */
   bottom: 0;
   left: 0;
   right: 0;
   display: grid;
   grid-template-columns: 20% 1fr;
   overflow: hidden;
+  transition: grid-template-columns 0.2s;
+}
+.chat-container.collapsed {
+  grid-template-columns: 0 1fr;
 }
 
 /* ─── Sidebar: History Panel ─── */
@@ -17,31 +23,16 @@
   padding: 1rem;
   overflow-y: auto;
 }
-#history-panel.collapsed {
-  width: 0;
-  padding: 0;
-  border: none;
-  overflow: hidden;
-}
-#history-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: .5rem;
-}
-#toggle-history {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1.2rem;
+#history-panel h3 {
+  margin-top: 0;
 }
 #chat-history {
   list-style: none;
   padding: 0;
-  margin: 0;
+  margin: 1rem 0 0;
 }
 #chat-history li {
-  padding: .4rem 0;
+  padding: 0.4rem 0;
   cursor: pointer;
   border-bottom: 1px solid #ddd;
 }
@@ -49,11 +40,31 @@
   background: #e9e9e9;
 }
 
+/* ─── Toggle Button ─────────────────────────────────────── */
+.history-toggle {
+  position: absolute;
+  top: 1rem;
+  left: 20%;
+  transform: translateX(-50%);
+  z-index: 10;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  cursor: pointer;
+  transition: left 0.2s, transform 0.2s;
+}
+.chat-container.collapsed .history-toggle {
+  left: 0;
+  transform: translateX(0) rotate(180deg);
+}
+
 /* ─── Main Chat Area ─── */
 .main-content {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 .chat-header {
   padding: 1rem;
@@ -68,20 +79,23 @@
 }
 .bubble {
   max-width: 75%;
-  margin: .75rem 0;
-  padding: .6rem .8rem;
+  margin: 0.5rem 0;
+  padding: 0.6rem 0.8rem;
   border-radius: 12px;
   line-height: 1.4;
+  word-wrap: break-word;
 }
+/* QUESTIONS: left-aligned */
 .bubble.user {
   background: #007bff;
   color: #fff;
-  align-self: flex-end;
-}
-.bubble.ai {
-  background: #f1f1f1;
-  color: #000;
   align-self: flex-start;
+}
+/* ANSWERS: right-aligned */
+.bubble.ai {
+  background: #e2e2e2;
+  color: #000;
+  align-self: flex-end;
 }
 
 /* ─── Input Area ─── */
@@ -93,17 +107,17 @@
 }
 #chat-input {
   flex: 1;
-  padding: .6rem;
+  padding: 0.6rem;
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 1rem;
 }
 #send-btn {
-  margin-left: .5rem;
-  padding: .6rem 1.2rem;
-  border: none;
-  border-radius: 4px;
+  margin-left: 0.5rem;
+  padding: 0.6rem 1.2rem;
   background: #28a745;
   color: #fff;
+  border: none;
+  border-radius: 4px;
   cursor: pointer;
 }
