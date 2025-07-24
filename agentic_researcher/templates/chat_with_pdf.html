@@ -14,7 +14,6 @@
   <aside id="history-panel">
     <div id="history-header">
       <h3>Chat History</h3>
-      <!-- no inner text; arrow via CSS -->
       <button id="toggle-history" class="toggle-btn" aria-label="Toggle history"></button>
     </div>
     <ul id="chat-history"></ul>
@@ -35,8 +34,9 @@
         autocomplete="off"
       />
       <button id="send-btn" type="submit" aria-label="Send">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <path fill="currentColor" d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
+        <!-- Simple chevron arrow -->
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <polyline points="6,4 18,12 6,20" fill="none" stroke="currentColor" stroke-width="2"/>
         </svg>
       </button>
     </form>
@@ -112,7 +112,7 @@ document.addEventListener("DOMContentLoaded", () => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-CSRFToken": "{{ csrf_token }}",
+        "X-CSRFToken": "{{ csrf_token }}"
       },
       body: JSON.stringify({ question: q })
     });
