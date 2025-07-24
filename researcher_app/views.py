@@ -228,7 +228,6 @@ class ChatWithPDFView(APIView):
             )
 
         svc = RAGService(pdf_id)
-        svc.build_index()
         hits = svc.retrieve(question, k=3)
         answer = svc.ask_gemini(hits, question)
 
