@@ -20,7 +20,9 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django import forms
 from researcher_app.services.rag_service import RAGService
+from .services.pdf_extractor import extract_pdf
 from os.path import basename
+
 
 
 def parse_pdf_async(pdf_id, file_path):
