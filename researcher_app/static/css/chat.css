@@ -7,7 +7,6 @@
   overflow: hidden;
   transition: grid-template-columns .2s;
 }
-/* collapse to a 60px peek */
 .chat-container.collapsed {
   grid-template-columns: 60px 1fr;
 }
@@ -22,11 +21,9 @@
   overflow-y: auto;
   transition: padding .2s;
 }
-/* preserve header area at 60px */
 .chat-container.collapsed #history-panel {
   padding: .5rem 0;
 }
-/* hide the text & list on collapse, keep header bar */
 .chat-container.collapsed #history-header h3,
 .chat-container.collapsed #chat-history {
   display: none;
@@ -42,12 +39,10 @@
   margin: 0;
   font-size: 1.1rem;
 }
-
-/* plain arrow in header */
 .toggle-btn {
   position: absolute;
   top: 50%;
-  right: 0;                          /* flush with right edge of sidebar */
+  right: 0;
   transform: translate(50%, -50%);
   background: none;
   border: none;
@@ -56,14 +51,18 @@
   color: #000;
   cursor: pointer;
 }
-.toggle-btn:hover {
-  text-decoration: underline;
+.toggle-btn::after {
+  content: '‹';
+  display: inline-block;
+  transition: color .2s;
+}
+.chat-container.collapsed .toggle-btn::after {
+  content: '›';
 }
 
-/* nudge it left when collapsed so it peeks out fully */
-.chat-container.collapsed .toggle-btn {
-  right: 3px;                       /* adjust as needed */
-  transform: translate(50%, -50%) rotate(180deg);
+/* hover effect */
+.toggle-btn:hover::after {
+  color: #555;
 }
 
 /* ─── History List ────────────────────────────────────────────────────────── */
@@ -134,9 +133,9 @@
   font-size: 1rem;
 }
 
-/* make the send-icon button BLUE again */
+/* Send‐button styling */
 #send-btn {
-  background-color: #007bff;         /* match user-bubble blue */
+  background-color: #007bff;
   border: none;
   padding: 0 .75rem;
   display: flex;
@@ -148,7 +147,7 @@
 #send-btn svg {
   width: 1.3rem;
   height: 1.3rem;
-  fill: #fff;                        /* white plane */
+  fill: #fff;
 }
 #send-btn:hover svg {
   opacity: .8;
