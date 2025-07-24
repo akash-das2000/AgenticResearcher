@@ -62,7 +62,7 @@
 
 /* nudge it left when collapsed so it peeks out fully */
 .chat-container.collapsed .toggle-btn {
-  right: -1px;                       /* adjust as needed */
+  right: 1px;                       /* adjust as needed */
   transform: translate(50%, -50%) rotate(180deg);
 }
 
