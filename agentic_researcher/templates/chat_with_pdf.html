@@ -1,48 +1,47 @@
-{# agentic_researcher/templates/chat_with_pdf.html #}
 {% extends "base.html" %}
 {% load static %}
 
-{# 1. Pull in our new chat CSS #}
+{# 1. Load the chat-specific CSS #}
 {% block extra_styles %}
-<link rel="stylesheet" href="{% static 'css/chat_with_pdf.css' %}">
+<link rel="stylesheet" href="{% static 'css/chat.css' %}">
 {% endblock %}
 
-{# 2. Suppress the site footer #}
+{# 2. Suppress the global footer #}
 {% block footer %}{% endblock %}
 
 {% block content %}
-  <div class="chat-container">
-    <!-- LEFT: history sidebar -->
-    <aside id="history-panel">
-      <div id="history-header">
-        <h3>Chat History</h3>
-        <button id="toggle-history">⮜</button>
-      </div>
-      <ul id="chat-history">
-        <!-- populated by JS -->
-      </ul>
-    </aside>
+<div class="chat-container">
+  <!-- LEFT: History sidebar -->
+  <aside id="history-panel">
+    <div id="history-header">
+      <h3>Chat History</h3>
+      <button id="toggle-history">⮜</button>
+    </div>
+    <ul id="chat-history">
+      <!-- populated by JS -->
+    </ul>
+  </aside>
 
-    <!-- RIGHT: chat area -->
-    <section class="main-content">
-      <div class="chat-header">
-        Chat with PDF: <strong>{{ pdf_title }}</strong>
-      </div>
-      <div id="chat-window">
-        <!-- bubbles go here -->
-      </div>
-      <form id="chat-form">
-        {% csrf_token %}
-        <input
-          type="text"
-          id="chat-input"
-          placeholder="Ask something about this PDF…"
-          autocomplete="off"
-        />
-        <button type="submit" id="send-btn">Send</button>
-      </form>
-    </section>
-  </div>
+  <!-- RIGHT: Active chat window -->
+  <section class="main-content">
+    <div class="chat-header">
+      Chat with PDF: <strong>{{ pdf_title }}</strong>
+    </div>
+    <div id="chat-window">
+      <!-- chat bubbles go here -->
+    </div>
+    <form id="chat-form">
+      {% csrf_token %}
+      <input
+        type="text"
+        id="chat-input"
+        placeholder="Ask something about this PDF…"
+        autocomplete="off"
+      />
+      <button type="submit" id="send-btn">Send</button>
+    </form>
+  </section>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -94,6 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     const q = chatInput.value.trim();
     if (!q) return;
+
     history.push({ role: "user", content: q });
     localStorage.setItem(historyKey, JSON.stringify(history));
     renderHistory(); renderChatUpTo();
@@ -108,6 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
       body: JSON.stringify({ question: q })
     });
     const { answer } = await res.json();
+
     history.push({ role: "ai", content: answer });
     localStorage.setItem(historyKey, JSON.stringify(history));
     renderHistory(); renderChatUpTo();
