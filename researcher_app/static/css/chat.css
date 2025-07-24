@@ -7,6 +7,7 @@
   overflow: hidden;
   transition: grid-template-columns .2s;
 }
+/* collapse to a 60px peek */
 .chat-container.collapsed {
   grid-template-columns: 60px 1fr;
 }
@@ -24,6 +25,7 @@
 .chat-container.collapsed #history-panel {
   padding: .5rem 0;
 }
+/* hide the list & title, keep header */
 .chat-container.collapsed #history-header h3,
 .chat-container.collapsed #chat-history {
   display: none;
@@ -31,36 +33,36 @@
 
 /* ─── Header & Toggle ─────────────────────────────────────────────────────── */
 #history-header {
-  position: relative;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 1rem;
 }
 #history-header h3 {
   margin: 0;
   font-size: 1.1rem;
 }
+
+/* toggle arrow button */
 .toggle-btn {
-  position: absolute;
-  top: 50%;
-  right: 0;
-  transform: translate(50%, -50%);
   background: none;
   border: none;
-  padding: 0;
   font-size: 1.2rem;
   color: #000;
   cursor: pointer;
+  padding: 0;
 }
+/* default left‐pointing arrow */
 .toggle-btn::after {
   content: '‹';
   display: inline-block;
   transition: color .2s;
 }
+/* swap to right arrow when collapsed */
 .chat-container.collapsed .toggle-btn::after {
   content: '›';
 }
-
-/* hover effect */
+/* hover dim */
 .toggle-btn:hover::after {
   color: #555;
 }
@@ -133,7 +135,7 @@
   font-size: 1rem;
 }
 
-/* Send‐button styling */
+/* send‐button with chevron */
 #send-btn {
   background-color: #007bff;
   border: none;
@@ -145,9 +147,9 @@
   cursor: pointer;
 }
 #send-btn svg {
-  width: 1.3rem;
-  height: 1.3rem;
-  fill: #fff;
+  width: 1.2rem;
+  height: 1.2rem;
+  color: #fff;
 }
 #send-btn:hover svg {
   opacity: .8;
