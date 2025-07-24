@@ -24,28 +24,23 @@ from os.path import basename
 
 
 def parse_pdf_async(pdf_id, file_path):
-    print(f"DEBUG: Background parsing for PDF {pdf_id}")
     try:
-        result = pdf_extractor.extract_pdf(file_path)
-        print(f"DEBUG: Extraction result - text len={len(result['text'])}, "
-              f"images={len(result['images'])}, tables={len(result['tables'])}")
-
+        # 1) extract text/images/tables
+        result = extract_pdf(file_path)
         pdf = UploadedPDF.objects.get(id=pdf_id)
         ExtractedContent.objects.create(
             pdf=pdf,
-            text=result['text'],
-            images=result['images'],
-            tables=result['tables']
+            text=result["text"],
+            images=result["images"],
+            tables=result["tables"],
         )
-        print("✅ Saved extracted content to DB")
 
-        # ── NEW: build & persist FAISS index once ──
+        # 2) build & persist FAISS index (only once)
         svc = RAGService(pdf_id)
         svc.build_index(persist=True)
-        print(f"✅ Built & cached FAISS index for PDF {pdf_id}")
-
+        print(f"✅ Saved extracted content and built index for PDF {pdf_id}")
     except Exception as e:
-        print(f"❌ Background parsing failed for PDF {pdf_id}: {e}")
+        print(f"❌ parse_pdf_async failed for PDF {pdf_id}: {e}")
 
 
 class UploadPDFView(APIView):
@@ -213,25 +208,23 @@ class MetaSectionView(APIView):
 class ChatWithPDFView(APIView):
     """
     POST /api/chat/pdf/<pdf_id>/
-    Body: { "question": "..." }
     """
     def post(self, request, pdf_id):
-        pdf = get_object_or_404(UploadedPDF, pk=pdf_id)
         question = request.data.get("question", "").strip()
         if not question:
-            return Response(
-                {"error": "No question provided."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "No question provided."},
+                            status=status.HTTP_400_BAD_REQUEST)
 
-        svc = RAGService(pdf_id)
-        hits = svc.retrieve(question, k=3)
-        answer = svc.ask_gemini(hits, question)
-
-        return Response({
-            "answer": answer,
-            "hits": hits
-        })
+        try:
+            svc    = RAGService(pdf_id)
+            hits   = svc.retrieve(question, k=3)      # lazy-load cached index
+            answer = svc.ask_gemini(hits, question)
+            return Response({"answer": answer, "hits": hits})
+        except Exception as e:
+            # log & surface any errors
+            print(f"❌ Chat error for PDF {pdf_id}: {e}")
+            return Response({"error": str(e)},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class NormalizationRuleView(APIView):
