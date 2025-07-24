@@ -2,40 +2,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Agentic Researcher</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Main site CSS -->
-    <link rel="stylesheet" href="{% static 'css/main.css' %}">
-    {# Allow pages to inject extra CSS #}
-    {% block extra_styles %}{% endblock %}
-    <!-- Webfonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <title>Agentic Researcher</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  {% block extra_styles %}{% endblock %}
+  <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header class="site-header">
-        <h1 class="site-title">Research Buddy</h1>
-        <p class="site-tagline">Your AI-powered research buddy</p>
-    </header>
+  <header class="site-header">
+    <h1 class="site-title">Research Buddy</h1>
+    <p class="site-tagline">Your AI-powered research buddy</p>
+  </header>
 
-    <main>
-        {% block content %}{% endblock %}
-    </main>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
 
-    {# Wrap footer in a block so pages can suppress it #}
-    {% block footer %}
-    <footer class="site-footer">
-        <p>&copy; 2025 Agentic Researcher. All rights reserved.</p>
-    </footer>
-    {% endblock %}
+  {% block footer %}
+  <footer class="site-footer">
+    <p>&copy; 2025 Agentic Researcher. All rights reserved.</p>
+  </footer>
+  {% endblock %}
 
-    <!-- PDF.js CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script>
-      window.pdfjsLib = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    window.pdfjsLib = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  </script>
 
-    {% block extra_scripts %}{% endblock %}
+  {% block extra_scripts %}{% endblock %}
 </body>
 </html>
