@@ -18,8 +18,8 @@ urlpatterns = [
     path('format/<int:pk>/', FormatBlogView.as_view(), name='format-blog'),
     path('meta/<int:pk>/', MetaSectionView.as_view(), name='meta-api'),
     
-    # Chat-with-PDF endpoint
-    path('chat/pdf/<int:pk>/', ChatWithPDFView.as_view(), name='chat-with-pdf'),
+    # Chat-with-PDF endpoint (use pdf_id to match the view signature)
+    path('chat/pdf/<int:pdf_id>/', ChatWithPDFView.as_view(), name='chat-with-pdf'),
     
     path('rules/', NormalizationRuleView.as_view(), name='normalization-rules'),
 ]
