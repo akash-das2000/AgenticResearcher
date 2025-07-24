@@ -14,8 +14,8 @@
   <aside id="history-panel">
     <div id="history-header">
       <h3>Chat History</h3>
-      <!-- Toggle sits here -->
-      <button id="toggle-history" class="toggle-btn" aria-label="Toggle history">‹</button>
+      <!-- no inner text; arrow via CSS -->
+      <button id="toggle-history" class="toggle-btn" aria-label="Toggle history"></button>
     </div>
     <ul id="chat-history"></ul>
   </aside>
@@ -52,7 +52,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const historyKey = `chatHistory_${pdfId}`;
 
   let fullHistory = JSON.parse(localStorage.getItem(historyKey) || "[]");
-  let userIndices = fullHistory.map((h,i)=>h.role==="user"?i:-1).filter(i=>i>=0);
+  let userIndices = fullHistory
+    .map((h,i)=> h.role==="user" ? i : -1)
+    .filter(i=> i>=0);
 
   const container   = document.getElementById("chat-container");
   const toggleBtn   = document.getElementById("toggle-history");
@@ -63,7 +65,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function saveHistory(){
     localStorage.setItem(historyKey, JSON.stringify(fullHistory));
-    userIndices = fullHistory.map((h,i)=>h.role==="user"?i:-1).filter(i=>i>=0);
+    userIndices = fullHistory
+      .map((h,i)=> h.role==="user" ? i : -1)
+      .filter(i=> i>=0);
   }
 
   function renderHistory(){
@@ -89,30 +93,30 @@ document.addEventListener("DOMContentLoaded", () => {
     chatWindow.scrollTop = chatWindow.scrollHeight;
   }
 
-  renderHistory(); renderChatUpTo();
+  renderHistory();
+  renderChatUpTo();
 
   toggleBtn.addEventListener("click", () => {
-    const collapsed = container.classList.toggle("collapsed");
-    toggleBtn.textContent = collapsed ? "›" : "‹";
+    container.classList.toggle("collapsed");
   });
 
   chatForm.addEventListener("submit", async e => {
     e.preventDefault();
     const q = chatInput.value.trim();
-    if(!q) return;
+    if (!q) return;
     fullHistory.push({role:"user",content:q});
     saveHistory(); renderHistory(); renderChatUpTo();
     chatInput.value = "";
 
     const res = await fetch(apiUrl, {
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json",
-        "X-CSRFToken":"{{ csrf_token }}"
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": "{{ csrf_token }}",
       },
-      body: JSON.stringify({question:q})
+      body: JSON.stringify({ question: q })
     });
-    const {answer="❌ Error"} = await res.json();
+    const { answer="❌ Error" } = await res.json();
     fullHistory.push({role:"ai",content:answer});
     saveHistory(); renderHistory(); renderChatUpTo();
   });
