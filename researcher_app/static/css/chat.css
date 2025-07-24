@@ -1,4 +1,4 @@
-/* ─── Layout ───────────────────────────────────────────────────────────────── */
+/* ─── Container ────────────────────────────────────────────────────────────── */
 .chat-container {
   position: fixed;
   top: 81px; bottom: 0; left: 0; right: 0;
@@ -26,7 +26,7 @@
 .chat-container.collapsed #history-panel {
   padding: .5rem 0;
 }
-/* hide text but leave header bar */
+/* hide the text & list on collapse, keep header bar */
 .chat-container.collapsed #history-header h3,
 .chat-container.collapsed #chat-history {
   display: none;
@@ -42,11 +42,12 @@
   margin: 0;
   font-size: 1.1rem;
 }
+
 /* plain arrow in header */
 .toggle-btn {
   position: absolute;
   top: 50%;
-  right: 0;
+  right: 0;                          /* flush with right edge of sidebar */
   transform: translate(50%, -50%);
   background: none;
   border: none;
@@ -59,7 +60,13 @@
   text-decoration: underline;
 }
 
-/* ─── History List ───────────────────────────────────────────────────────── */
+/* nudge it left when collapsed so it peeks out fully */
+.chat-container.collapsed .toggle-btn {
+  right: -8px;                       /* adjust as needed */
+  transform: translate(50%, -50%) rotate(180deg);
+}
+
+/* ─── History List ────────────────────────────────────────────────────────── */
 #chat-history {
   list-style: none;
   padding: 0;
@@ -126,20 +133,23 @@
   border-radius: 4px;
   font-size: 1rem;
 }
+
+/* make the send-icon button BLUE again */
 #send-btn {
-  background: none;
+  background-color: #007bff;         /* match user-bubble blue */
   border: none;
   padding: 0 .75rem;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
 }
 #send-btn svg {
   width: 1.3rem;
   height: 1.3rem;
-  fill: #003366; /* match "Research Buddy" color */
+  fill: #fff;                        /* white plane */
 }
 #send-btn:hover svg {
-  opacity: .7;
+  opacity: .8;
 }
