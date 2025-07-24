@@ -51,12 +51,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const apiUrl     = `/api/chat/pdf/${pdfId}/`;
   const historyKey = `chatHistory_${pdfId}`;
 
-  // full turn history, including ai responses
   let fullHistory = JSON.parse(localStorage.getItem(historyKey) || "[]");
-  // indices of user messages in fullHistory
   let userIndices = fullHistory
-    .map((h, i) => h.role === "user" ? i : -1)
-    .filter(i => i >= 0);
+    .map((h,i) => h.role==="user" ? i : -1)
+    .filter(i => i>=0);
 
   const container    = document.getElementById("chat-container");
   const panel        = document.getElementById("history-panel");
@@ -69,29 +67,31 @@ document.addEventListener("DOMContentLoaded", () => {
   function saveHistory() {
     localStorage.setItem(historyKey, JSON.stringify(fullHistory));
     userIndices = fullHistory
-      .map((h, i) => h.role === "user" ? i : -1)
-      .filter(i => i >= 0);
+      .map((h,i) => h.role==="user" ? i : -1)
+      .filter(i => i>=0);
   }
 
   function renderHistory() {
     historyList.innerHTML = "";
-    userIndices.forEach((fullIdx, idx) => {
+    userIndices.forEach(fullIdx => {
       const turn = fullHistory[fullIdx];
-      const li = document.createElement("li");
-      li.textContent = turn.content.slice(0, 30) + "…";
-      li.addEventListener("click", () => renderChatUpTo(fullIdx));
+      const li   = document.createElement("li");
+      li.textContent = turn.content.slice(0,30) + "…";
+      // show question + its answer (if exists)
+      const displayIdx = Math.min(fullIdx + 1, fullHistory.length - 1);
+      li.addEventListener("click", () => renderChatUpTo(displayIdx));
       historyList.appendChild(li);
     });
   }
 
-  function renderChatUpTo(fullIdx = fullHistory.length - 1) {
+  function renderChatUpTo(lastIdx = fullHistory.length - 1) {
     chatWindow.innerHTML = "";
-    for (let i = 0; i <= fullIdx; i++) {
-      const turn = fullHistory[i];
-      const bubble = document.createElement("div");
-      bubble.classList.add("bubble", turn.role);
-      bubble.textContent = turn.content;
-      chatWindow.appendChild(bubble);
+    for (let i=0; i<= lastIdx; i++) {
+      const t = fullHistory[i];
+      const b = document.createElement("div");
+      b.classList.add("bubble", t.role);
+      b.textContent = t.content;
+      chatWindow.appendChild(b);
     }
     chatWindow.scrollTop = chatWindow.scrollHeight;
   }
@@ -100,41 +100,33 @@ document.addEventListener("DOMContentLoaded", () => {
   renderHistory();
   renderChatUpTo();
 
-  // toggle panel
+  // toggle sidebar
   toggleBtn.addEventListener("click", () => {
     container.classList.toggle("collapsed");
   });
 
-  // submit new question
+  // send question
   chatForm.addEventListener("submit", async e => {
     e.preventDefault();
     const q = chatInput.value.trim();
     if (!q) return;
 
-    // add user turn
-    fullHistory.push({ role: "user", content: q });
-    saveHistory();
-    renderHistory();
-    renderChatUpTo();
+    fullHistory.push({role:"user", content:q});
+    saveHistory(); renderHistory(); renderChatUpTo();
     chatInput.value = "";
 
-    // call backend
-    const resp = await fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": "{{ csrf_token }}",
+    const res = await fetch(apiUrl, {
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "X-CSRFToken":"{{ csrf_token }}",
       },
-      body: JSON.stringify({ question: q }),
+      body: JSON.stringify({question:q})
     });
-    const data = await resp.json();
-    const answer = data.answer || data.error || "❌ Error";
+    const { answer = "❌ Error" } = await res.json();
 
-    // add AI turn
-    fullHistory.push({ role: "ai", content: answer });
-    saveHistory();
-    renderHistory();
-    renderChatUpTo();
+    fullHistory.push({role:"ai", content:answer});
+    saveHistory(); renderHistory(); renderChatUpTo();
   });
 });
 </script>
