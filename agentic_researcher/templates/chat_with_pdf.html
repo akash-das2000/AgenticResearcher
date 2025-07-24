@@ -14,10 +14,9 @@
   <aside id="history-panel">
     <div id="history-header">
       <h3>Chat History</h3>
-      <!-- Toggle lives in the header now -->
       <button id="toggle-history" class="toggle-btn">‹</button>
     </div>
-    <ul id="chat-history"><!-- user questions --></ul>
+    <ul id="chat-history"></ul>
   </aside>
 
   <!-- CHAT AREA -->
@@ -25,7 +24,7 @@
     <div class="chat-header">
       Chat with PDF: <strong>{{ pdf_title }}</strong>
     </div>
-    <div id="chat-window"><!-- bubbles --></div>
+    <div id="chat-window"></div>
     <form id="chat-form">
       {% csrf_token %}
       <input
@@ -34,7 +33,12 @@
         placeholder="Ask something about this PDF…"
         autocomplete="off"
       />
-      <button id="send-btn" type="submit">Send</button>
+      <button id="send-btn" type="submit" aria-label="Send">
+        <!-- Paper-plane send icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
+        </svg>
+      </button>
     </form>
   </section>
 </div>
@@ -47,8 +51,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const apiUrl     = `/api/chat/pdf/${pdfId}/`;
   const historyKey = `chatHistory_${pdfId}`;
 
-  let fullHistory = JSON.parse(localStorage.getItem(historyKey)||"[]");
-  let userIndices = fullHistory.map((h,i)=>h.role==="user"?i:-1).filter(i=>i>=0);
+  let fullHistory  = JSON.parse(localStorage.getItem(historyKey) || "[]");
+  let userIndices  = fullHistory.map((h,i)=>h.role==="user"?i:-1).filter(i=>i>=0);
 
   const container   = document.getElementById("chat-container");
   const toggleBtn   = document.getElementById("toggle-history");
@@ -57,59 +61,59 @@ document.addEventListener("DOMContentLoaded", () => {
   const chatForm    = document.getElementById("chat-form");
   const chatInput   = document.getElementById("chat-input");
 
-  function saveHistory(){
-    localStorage.setItem(historyKey,JSON.stringify(fullHistory));
+  function saveHistory() {
+    localStorage.setItem(historyKey, JSON.stringify(fullHistory));
     userIndices = fullHistory.map((h,i)=>h.role==="user"?i:-1).filter(i=>i>=0);
   }
 
-  function renderHistory(){
-    historyList.innerHTML="";
-    userIndices.forEach(fullIdx=>{
-      const q = fullHistory[fullIdx].content;
+  function renderHistory() {
+    historyList.innerHTML = "";
+    userIndices.forEach(fullIdx => {
       const li = document.createElement("li");
-      li.textContent = q.slice(0,30)+"…";
-      const showUpTo = Math.min(fullIdx+1, fullHistory.length-1);
-      li.onclick = ()=> renderChatUpTo(showUpTo);
+      li.textContent = fullHistory[fullIdx].content.slice(0,30) + "…";
+      const upto = Math.min(fullIdx+1, fullHistory.length-1);
+      li.onclick = () => renderChatUpTo(upto);
       historyList.appendChild(li);
     });
   }
 
-  function renderChatUpTo(idx=fullHistory.length-1){
-    chatWindow.innerHTML="";
-    for(let i=0;i<=idx;i++){
-      const t = fullHistory[i];
-      const b = document.createElement("div");
-      b.classList.add("bubble", t.role);
-      b.textContent = t.content;
-      chatWindow.appendChild(b);
+  function renderChatUpTo(lastIdx = fullHistory.length-1) {
+    chatWindow.innerHTML = "";
+    for (let i=0; i<= lastIdx; i++) {
+      const turn = fullHistory[i];
+      const bubble = document.createElement("div");
+      bubble.classList.add("bubble", turn.role);
+      bubble.textContent = turn.content;
+      chatWindow.appendChild(bubble);
     }
     chatWindow.scrollTop = chatWindow.scrollHeight;
   }
 
   renderHistory(); renderChatUpTo();
 
-  toggleBtn.addEventListener("click", ()=>{
-    const isCollapsed = container.classList.toggle("collapsed");
-    toggleBtn.textContent = isCollapsed ? "›" : "‹";
+  toggleBtn.addEventListener("click", () => {
+    const collapsed = container.classList.toggle("collapsed");
+    toggleBtn.textContent = collapsed ? "›" : "‹";
   });
 
-  chatForm.addEventListener("submit", async e=>{
+  chatForm.addEventListener("submit", async e => {
     e.preventDefault();
-    const q = chatInput.value.trim(); if(!q) return;
-    fullHistory.push({role:"user",content:q});
+    const q = chatInput.value.trim();
+    if (!q) return;
+    fullHistory.push({ role:"user", content:q });
     saveHistory(); renderHistory(); renderChatUpTo();
-    chatInput.value="";
+    chatInput.value = "";
 
     const res = await fetch(apiUrl, {
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json",
-        "X-CSRFToken":"{{ csrf_token }}",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": "{{ csrf_token }}",
       },
-      body: JSON.stringify({question:q})
+      body: JSON.stringify({ question: q }),
     });
     const { answer="❌ Error" } = await res.json();
-    fullHistory.push({role:"ai",content:answer});
+    fullHistory.push({ role:"ai", content: answer });
     saveHistory(); renderHistory(); renderChatUpTo();
   });
 });
