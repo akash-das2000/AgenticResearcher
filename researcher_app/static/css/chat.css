@@ -15,21 +15,20 @@ body {
 main {
   flex: 1;
   display: flex;
-  flex-direction: column;
 }
 
-/* ─── Chat Container (two-column) ─── */
+/* ─── Chat Container ─── */
 .chat-container {
   display: grid;
   grid-template-columns: 20% 1fr;
-  overflow: hidden;   /* single scrollbar for each column */
+  overflow: hidden;
 }
 
-/* ─── Left: Chat History Sidebar ─── */
+/* ─── Left Sidebar ─── */
 #history-panel {
   background: #f4f4f4;
-  padding: 1rem;
   border-right: 1px solid #ccc;
+  padding: 1rem;
   overflow-y: auto;
 }
 #history-panel.collapsed {
@@ -64,7 +63,7 @@ main {
   background: #e9e9e9;
 }
 
-/* ─── Right: Chat Area ─── */
+/* ─── Right Chat Area ─── */
 .main-content {
   display: flex;
   flex-direction: column;
@@ -82,10 +81,9 @@ main {
 }
 .bubble {
   max-width: 75%;
-  margin-bottom: .75rem;
+  margin: .75rem 0;
   padding: .6rem .8rem;
   border-radius: 12px;
-  word-wrap: break-word;
   line-height: 1.4;
 }
 .bubble.user {
@@ -99,7 +97,7 @@ main {
   align-self: flex-start;
 }
 
-/* ─── Input Form ─── */
+/* ─── Input Area ─── */
 #chat-form {
   display: flex;
   padding: 1rem;
