@@ -7,12 +7,13 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='blogdraft',
-            name='is_final',
-            field=models.BooleanField(
-                default=False,
-                help_text='True once the user has “OK’d” this section'
-            ),
-        ),
+        # migrations.AddField(
+        #     model_name='blogdraft',
+        #     name='is_final',
+        #     field=models.BooleanField(
+        #         default=False,
+        #         help_text='True once the user has “OK’d” this section'
+        #     ),
+        # ),
+        # No-op: 'title' already exists in 0001_initial
     ]
