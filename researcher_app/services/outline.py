@@ -4,6 +4,38 @@ import json
 import re
 from .api_handler import call_llm
 
+def _response_to_text(resp) -> str:
+    """
+    Normalize different LLM SDK responses (Gemini/OpenAI) to a plain string.
+    Safe even if resp is already a string.
+    """
+    if resp is None:
+        return ""
+
+    # If already a string
+    if isinstance(resp, str):
+        return resp
+
+    # Try common dict shape (OpenAI)
+    try:
+        if isinstance(resp, dict):
+            if "choices" in resp and resp["choices"]:
+                msg = resp["choices"][0].get("message", {})
+                content = msg.get("content")
+                if isinstance(content, str):
+                    return content
+            if "content" in resp and isinstance(resp["content"], str):
+                return resp["content"]
+            return json.dumps(resp)
+    except Exception:
+        pass
+
+    # Last resort: str()
+    try:
+        return str(resp)
+    except Exception:
+        return ""
+
 def generate_outline(full_text, preferred="gemini"):
     """
     Generates a professional blog outline from extracted text.
@@ -66,20 +98,30 @@ Apply these changes to the outline and return updated JSON:
     return _parse_llm_response(updated_response)
 
 
-def _parse_llm_response(response_text):
+def _parse_llm_response(resp) -> dict:
     """
-    Cleans and parses LLM response into JSON.
-
-    Args:
-        response_text (str): Raw LLM response.
-
-    Returns:
-        dict: Parsed JSON.
+    Accept raw LLM response (object or string), coerce to text, strip fences, parse JSON.
+    Expected JSON: {"sections":[{"title":"...","bullets":[...]}, ...]}
     """
-    # Clean markdown fences like ```json ... ```
+    response_text = _response_to_text(resp)
+
+    # Clean markdown code fences like ```json ... ```
     cleaned = re.sub(r"```json|```", "", response_text).strip()
 
+    # Try to isolate a JSON object if the model wrapped it in prose
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+    candidate = cleaned[start:end + 1] if (start != -1 and end != -1 and end > start) else cleaned
+
     try:
-        return json.loads(cleaned)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid JSON from LLM: {e}\n\nRaw response:\n{response_text}")
+        data = json.loads(candidate)
+    except Exception:
+        # Fallback: make a minimal outline from plain text
+        bullets = [line.strip() for line in cleaned.splitlines() if line.strip()]
+        data = {"sections": [{"title": "Outline", "bullets": bullets}]}
+
+    if "sections" not in data or not isinstance(data["sections"], list):
+        data = {"sections": []}
+
+    return data
+
