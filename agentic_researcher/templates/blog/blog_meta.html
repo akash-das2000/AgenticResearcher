@@ -97,7 +97,14 @@
         style="display:none; flex:1; display:flex; flex-direction:column;"
       >
         <h2 style="margin:0 0 0.5rem;">Blog Metadata</h2>
-        <form id="meta-form" method="post" style="flex:1; display:flex; flex-direction:column;">
+        <form
+          id="meta-form"
+          method="post"
+          action="{% url 'blog_meta' outline_id=outline_id %}"
+          autocomplete="off"
+          style="display:flex; flex-direction:column; height:100%;"
+        >
+
           {% csrf_token %}
           <!-- Title & Author are pure inputs -->
           <label for="title-input"><strong>Title:</strong></label>
@@ -131,9 +138,11 @@
           ></textarea>
 
           <textarea
-            id="feedback"
+            id="desc-feedback"
+            name="desc_feedback"
             rows="2"
             placeholder="Any tweaks to description?"
+            autocomplete="off"
             style="padding:0.5rem; margin-bottom:0.8rem; border:1px solid #ccc; border-radius:4px;"
           ></textarea>
 
@@ -185,6 +194,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const feedbackTA  = document.getElementById("feedback");
   const historyEl   = document.getElementById("feedback-history");
   const applyBtn    = document.getElementById("apply-feedback");
+  const textarea    = document.getElementById("desc-feedback");
 
   // --- History load/store (unchanged) ---
   let historyStore = JSON.parse(localStorage.getItem(historyKey) || "[]");
