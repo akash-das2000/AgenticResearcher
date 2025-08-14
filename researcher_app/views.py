@@ -22,6 +22,9 @@ from django import forms
 from researcher_app.services.rag_service import RAGService
 from .services.pdf_extractor import extract_pdf
 from os.path import basename
+from django.conf import settings
+import os
+from django.core.files.storage import default_storage
 
 
 
@@ -409,3 +412,4 @@ def ppt_page(request, pk):
 
 def poster_page(request, pk):
     return render(request, 'poster.html', {'pdf_id': pk})
+
