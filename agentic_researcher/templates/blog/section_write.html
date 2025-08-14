@@ -99,14 +99,16 @@
       <form
         id="feedback-form"
         method="post"
+        autocomplete="off"
         style="flex:none; display:flex; flex-direction:column;"
       >
         {% csrf_token %}
         <textarea
-          id="feedback"
-          name="feedback"
+          id="section-feedback"
+          name="section-feedback"
           rows="3"
           placeholder="Any edits or suggestions?"
+          autocomplete="off"
           style="
             padding:0.5rem;
             font-size:0.9rem;
@@ -183,7 +185,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const contentEl   = document.getElementById("section-content");
   const historyEl   = document.getElementById("feedback-history");
   const form        = document.getElementById("feedback-form");
-  const textarea    = document.getElementById("feedback");
+  const textarea    = document.getElementById("section-feedback");
 
   // --- History load/store (unchanged) ---
   let historyList = JSON.parse(localStorage.getItem(historyKey) || "[]");
