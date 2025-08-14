@@ -365,8 +365,15 @@ def blog_finish(request, outline_id):
     files = formatter.save_html_and_pdf(
         html_content, filename=f"blog_{outline_obj.id}"
     )
-    html_url = settings.MEDIA_URL + os.path.basename(files['html_path'])
-    pdf_url = settings.MEDIA_URL + os.path.basename(files['pdf_path'])
+    
+    # Convert absolute paths (under MEDIA_ROOT) to storage-relative paths
+    rel_html = os.path.relpath(files['html_path'], settings.MEDIA_ROOT)
+    rel_pdf  = os.path.relpath(files['pdf_path'],  settings.MEDIA_ROOT)
+    
+    # Ask Django's storage to build proper URLs, then make them absolute for the template
+    html_url = request.build_absolute_uri(default_storage.url(rel_html))
+    pdf_url  = request.build_absolute_uri(default_storage.url(rel_pdf))
+
     return render(request, "blog/blog_finish.html", {
         "outline_id": outline_id,
         "blog_html": html_content,
@@ -412,4 +419,5 @@ def ppt_page(request, pk):
 
 def poster_page(request, pk):
     return render(request, 'poster.html', {'pdf_id': pk})
+
 
