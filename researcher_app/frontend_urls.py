@@ -11,6 +11,8 @@ from .views import (
     blog_finish,
     blog_preview,
     blog_meta,
+    download_generated_html,
+    download_generated_pdf,
 )
 
 urlpatterns = [
@@ -32,6 +34,9 @@ urlpatterns = [
     path('blog/finish/<int:outline_id>/', blog_finish, name='blog_finish'),
     path('blog/meta/<int:outline_id>/', blog_meta, name='blog_meta'),
     path('blog/preview/<int:outline_id>/',blog_preview,name='blog_preview'),
+    path('blog/finish/<int:outline_id>/download.html', download_generated_html, name='download_html'),
+    path('blog/finish/<int:outline_id>/download.pdf',  download_generated_pdf,  name='download_pdf'),
+
 
     # ——— Existing “view a blog” page ———
     # (you probably want this to render the final HTML/PDF)
