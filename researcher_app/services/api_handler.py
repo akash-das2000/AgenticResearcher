@@ -40,14 +40,45 @@ def call_llm(prompt, preferred="gemini", model_openai="gpt-4o", model_gemini="ge
     """
     try:
         if preferred == "gemini":
-            if not client:
-                raise ValueError("Gemini client not initialized.")
-            print(f"🌟 Using Gemini API ({model_gemini})...")
-            response = client.models.generate_content(
+            if not GEMINI_API_KEY:
+                raise ValueError("Missing GEMINI_API_KEY")
+        
+            client = genai.Client(api_key=GEMINI_API_KEY)
+            resp = client.models.generate_content(
                 model=model_gemini,
                 contents=prompt
             )
-            return response.text
+        
+            # Always return a STRING
+            if hasattr(resp, "text") and isinstance(resp.text, str) and resp.text.strip():
+                return resp.text
+        
+            # fallback: collect candidates/parts text if needed
+            texts = []
+            try:
+                for c in getattr(resp, "candidates", []) or []:
+                    content = getattr(c, "content", None)
+                    parts = getattr(content, "parts", None) if content else None
+                    if parts:
+                        for p in parts:
+                            t = getattr(p, "text", None)
+                            if isinstance(t, str) and t.strip():
+                                texts.append(t)
+            except Exception:
+                pass
+        
+            return "\n".join(texts) if texts else ""
+
+        # if preferred == "gemini":
+        #     if not client:
+        #         raise ValueError("Gemini client not initialized.")
+        #     print(f"🌟 Using Gemini API ({model_gemini})...")
+        #     response = client.models.generate_content(
+        #         model=model_gemini,
+        #         contents=prompt
+        #     )
+        #     return response.text
+        
         elif preferred == "openai":
             if not OPENAI_API_KEY:
                 raise ValueError("OpenAI API key missing.")
@@ -66,3 +97,4 @@ def call_llm(prompt, preferred="gemini", model_openai="gpt-4o", model_gemini="ge
         fallback = "openai" if preferred == "gemini" else "gemini"
         print(f"🔄 Falling back to {fallback} API...")
         return call_llm(prompt, preferred=fallback, model_openai=model_openai, model_gemini=model_gemini)
+
