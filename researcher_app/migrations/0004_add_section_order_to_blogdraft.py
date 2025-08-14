@@ -7,12 +7,13 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='blogdraft',
-            name='section_order',
-            field=models.PositiveIntegerField(
-                default=0,
-                help_text='Order of this section within the outline'
-            ),
-        ),
+        # migrations.AddField(
+        #     model_name='blogdraft',
+        #     name='section_order',
+        #     field=models.PositiveIntegerField(
+        #         default=0,
+        #         help_text='Order of this section within the outline'
+        #     ),
+        # ),
+        # No-op: 'title' already exists in 0001_initial
     ]
