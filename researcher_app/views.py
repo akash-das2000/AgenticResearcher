@@ -17,14 +17,15 @@ from .services import pdf_extractor, outline, writer, formatter
 import tempfile
 import threading
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse
+from django.http import HttpResponse, FileResponse, Http404
 from django import forms
 from researcher_app.services.rag_service import RAGService
 from .services.pdf_extractor import extract_pdf
 from os.path import basename
+from django.urls import reverse
 from django.conf import settings
 import os
-from django.core.files.storage import default_storage
+import mimetypes
 
 
 
@@ -362,17 +363,10 @@ def blog_finish(request, outline_id):
         blog_title=outline_obj.title or "Untitled Blog",
         author=(request.user.username if request.user.is_authenticated else "Anonymous")
     )
-    files = formatter.save_html_and_pdf(
-        html_content, filename=f"blog_{outline_obj.id}"
-    )
-    
-    # Convert absolute paths (under MEDIA_ROOT) to storage-relative paths
-    rel_html = os.path.relpath(files['html_path'], settings.MEDIA_ROOT)
-    rel_pdf  = os.path.relpath(files['pdf_path'],  settings.MEDIA_ROOT)
-    
-    # Ask Django's storage to build proper URLs, then make them absolute for the template
-    html_url = request.build_absolute_uri(default_storage.url(rel_html))
-    pdf_url  = request.build_absolute_uri(default_storage.url(rel_pdf))
+    files = formatter.save_html_and_pdf(html_content, filename=f"blog_{outline_obj.id}")
+
+    html_url = request.build_absolute_uri(reverse("download_html", args=[outline_id]))
+    pdf_url = request.build_absolute_uri(reverse("download_pdf", args=[outline_id]))
 
     return render(request, "blog/blog_finish.html", {
         "outline_id": outline_id,
@@ -392,6 +386,50 @@ def blog_preview(request, outline_id):
         author=outline_obj.author_name or "Anonymous"
     )
     return HttpResponse(html_content)
+
+
+def _ensure_files_for_outline(outline_id):
+    """
+    Make sure blog_{outline_id}.html/pdf exist under MEDIA_ROOT/final_blogs.
+    If missing, regenerate them from the DB and return absolute file paths.
+    """
+    html_path = os.path.join(settings.MEDIA_ROOT, "final_blogs", f"blog_{outline_id}.html")
+    pdf_path  = os.path.join(settings.MEDIA_ROOT, "final_blogs", f"blog_{outline_id}.pdf")
+
+    if os.path.exists(html_path) and os.path.exists(pdf_path):
+        return {"html_path": html_path, "pdf_path": pdf_path}
+
+    # Regenerate (same logic as blog_finish)
+    outline_obj = get_object_or_404(BlogOutline, id=outline_id)
+    drafts = outline_obj.drafts.order_by("section_order")
+    sections = [{"title": d.section_title, "body": d.content} for d in drafts]
+    html_content = formatter.assemble_html(
+        sections,
+        blog_title=outline_obj.title or "Untitled Blog",
+        author=outline_obj.author_name or (
+            outline_obj.author_name or "Anonymous"
+        )
+    )
+    return formatter.save_html_and_pdf(
+        html_content, filename=f"blog_{outline_obj.id}"
+    )
+
+
+def download_generated_html(request, outline_id):
+    files = _ensure_files_for_outline(outline_id)
+    path = files["html_path"]
+    if not os.path.exists(path):
+        raise Http404("HTML not found")
+    mime_type, _ = mimetypes.guess_type(path)
+    return FileResponse(open(path, "rb"), content_type=mime_type or "text/html")
+
+
+def download_generated_pdf(request, outline_id):
+    files = _ensure_files_for_outline(outline_id)
+    path = files["pdf_path"]
+    if not os.path.exists(path):
+        raise Http404("PDF not found")
+    return FileResponse(open(path, "rb"), content_type="application/pdf")
 
 
 # Frontend page renderers
@@ -419,5 +457,6 @@ def ppt_page(request, pk):
 
 def poster_page(request, pk):
     return render(request, 'poster.html', {'pdf_id': pk})
+
 
 
