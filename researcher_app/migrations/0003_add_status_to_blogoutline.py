@@ -7,17 +7,18 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='blogoutline',
-            name='status',
-            field=models.CharField(
-                max_length=20,
-                choices=[
-                    ('drafting', 'Editing Outline'),
-                    ('finalized', 'Outline Finalized'),
-                ],
-                default='drafting',
-                help_text='Have we locked in the outline yet?'
-            ),
-        ),
+        # migrations.AddField(
+        #     model_name='blogoutline',
+        #     name='status',
+        #     field=models.CharField(
+        #         max_length=20,
+        #         choices=[
+        #             ('drafting', 'Editing Outline'),
+        #             ('finalized', 'Outline Finalized'),
+        #         ],
+        #         default='drafting',
+        #         help_text='Have we locked in the outline yet?'
+        #     ),
+        # ),
+        # No-op: 'title' already exists in 0001_initial
     ]
