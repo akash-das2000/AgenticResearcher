@@ -23,12 +23,26 @@ body {
   padding: 0.4rem 0;
   background: #f8f9fa;
 }
+
+/* Title + Logo */
 .site-title {
+  display: flex;              /* place logo + text side by side */
+  justify-content: center;    /* keep centered overall */
+  align-items: center;        /* align logo with text */
+  gap: 10px;                  /* spacing between logo & text */
   font-family: 'Merriweather', serif;
   font-size: 2rem;  /* ≈36px */
   color: #003366;
   margin: 0;
 }
+
+/* Logo itself */
+.site-title .site-logo {
+  height: 40px;   /* adjust size if needed */
+  width: auto;
+  display: inline-block;
+}
+
 .site-tagline {
   font-size: 1rem;  /* ≈18px */
   color: #6c757d;
@@ -218,6 +232,7 @@ button:disabled,
     width: 100%;
   }
 }
+
 @media (max-width: 576px) {
   .action-buttons {
     flex-direction: column;
@@ -225,5 +240,9 @@ button:disabled,
   .action-btn {
     width: 100%;
     justify-content: center;
+  }
+  /* shrink logo a bit on very small screens */
+  .site-title .site-logo {
+    height: 30px;
   }
 }
