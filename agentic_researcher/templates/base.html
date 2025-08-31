@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Agentic Researcher</title>
+  <title>Research Buddy</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Main CSS -->
   <link rel="stylesheet" href="{% static 'css/main.css' %}">
@@ -12,7 +12,10 @@
 </head>
 <body>
   <header class="site-header">
-    <h1 class="site-title">Research Buddy</h1>
+    <h1 class="site-title">
+      <img src="{% static 'images/RB_logo.png' %}" alt="Research Buddy Logo" class="site-logo">
+      Research Buddy
+    </h1>
     <p class="site-tagline">Your AI-powered research buddy</p>
   </header>
 
@@ -22,7 +25,7 @@
 
   {% block footer %}
   <footer class="site-footer">
-    <p>&copy; 2025 Agentic Researcher. All rights reserved.</p>
+    <p>&copy; 2025 Research Buddy. All rights reserved.</p>
   </footer>
   {% endblock %}
 
