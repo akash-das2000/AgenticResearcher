@@ -18,31 +18,40 @@ body {
   position: sticky;
   top: 0;
   z-index: 1000;
-  text-align: center;
-  margin-top: 0.5rem;
-  padding: 0.4rem 0;
   background: #f8f9fa;
+  padding: 0.6rem 0;
+  margin-top: 0.5rem;
 }
 
-/* Title + Logo */
+/* Wrapper: logo + text */
+.title-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;  /* center everything */
+  gap: 14px;                /* spacing between logo & text */
+}
+
+/* Logo spans both lines (title + tagline) */
+.site-logo {
+  height: 70px;   /* adjust to taste */
+  width: auto;
+  display: inline-block;
+}
+
+/* Text block beside logo */
+.title-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/* Title and tagline */
 .site-title {
-  display: flex;              /* place logo + text side by side */
-  justify-content: center;    /* keep centered overall */
-  align-items: center;        /* align logo with text */
-  gap: 10px;                  /* spacing between logo & text */
   font-family: 'Merriweather', serif;
   font-size: 2rem;  /* ≈36px */
   color: #003366;
   margin: 0;
 }
-
-/* Logo itself */
-.site-title .site-logo {
-  height: 65px;   /* adjust size if needed */
-  width: auto;
-  display: inline-block;
-}
-
 .site-tagline {
   font-size: 1rem;  /* ≈18px */
   color: #6c757d;
@@ -241,8 +250,9 @@ button:disabled,
     width: 100%;
     justify-content: center;
   }
-  /* shrink logo a bit on very small screens */
-  .site-title .site-logo {
-    height: 30px;
+
+  /* shrink logo on small screens */
+  .site-logo {
+    height: 50px;
   }
 }
