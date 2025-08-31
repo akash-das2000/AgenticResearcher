@@ -38,7 +38,7 @@ body {
 
 /* Logo itself */
 .site-title .site-logo {
-  height: 40px;   /* adjust size if needed */
+  height: 65px;   /* adjust size if needed */
   width: auto;
   display: inline-block;
 }
