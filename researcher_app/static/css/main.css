@@ -28,14 +28,15 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;  /* center everything */
-  gap: 14px;                /* spacing between logo & text */
+  gap: 10px;                /* tighter spacing between logo & text */
 }
 
-/* Logo spans both lines (title + tagline) */
+/* Logo more prominent */
 .site-logo {
-  height: 70px;   /* adjust to taste */
+  height: 85px;   /* bigger, spans both lines strongly */
   width: auto;
   display: inline-block;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15)); /* subtle pop */
 }
 
 /* Text block beside logo */
@@ -117,7 +118,6 @@ body {
 }
 
 /* ─── Buttons ────────────────────────────────────────────────────────────── */
-/* Primary and action buttons */
 button,
 .primary-btn,
 .action-btn {
@@ -250,9 +250,8 @@ button:disabled,
     width: 100%;
     justify-content: center;
   }
-
-  /* shrink logo on small screens */
+  /* shrink logo slightly on very small screens */
   .site-logo {
-    height: 50px;
+    height: 60px;
   }
 }
